@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Тренировка — вопросы</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 700px;
+      margin: 30px auto;
+      padding: 0 15px;
+      line-height: 1.5;
+    }
+    h1, h2 { text-align: center; }
+    .question { margin: 30px 0; }
+    .options label {
+      display: block;
+      margin: 12px 0;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .options input[type="radio"] { margin-right: 10px; }
+    button {
+      padding: 12px 24px;
+      font-size: 1.1rem;
+      margin: 10px;
+      cursor: pointer;
+    }
+    #result {
+      padding: 15px;
+      border-radius: 6px;
+      margin: 20px 0;
+      min-height: 80px;
+    }
+    .correct   { background: #e6ffe6; color: darkgreen; }
+    .wrong     { background: #ffe6e6; color: darkred; }
+    .explanation { margin-top: 15px; font-style: italic; }
+    #progress  { text-align: center; color: #555; }
+    .hidden    { display: none; }
+  </style>
+</head>
+<body>
+
+<h1>Тренировка</h1>
+
+<div id="start-screen">
+  <h2>Готов начать?</h2>
+  <button onclick="startTraining()">Начать</button>
+</div>
+
+<div id="quiz" class="hidden">
+  <div id="progress"></div>
+  
+  <div class="question">
+    <h3 id="question-text"></h3>
+    <div id="image-container"></div>
+    
+    <div class="options" id="options"></div>
+    
+    <button id="submit-btn" onclick="checkAnswer()">Ответить</button>
+  </div>
+  
+  <div id="result" class="hidden"></div>
+  
+  <div id="controls" class="hidden">
+    <button onclick="nextQuestion()">Следующий →</button>
+    <button onclick="location.reload()">В начало</button>
+  </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────
+//    Вопросы (можно заменить на свои)
+const questions = [
+  {
+    text: "Что означает аббревиатура 1С?",
+    options: ["Один сотрудник", "1С:Предприятие", "Один сервер", "Первый класс"],
+    correct: 1,
+    explanation: "1С — это компания и платформа «1С:Предприятие»",
+    image: "" // "https://example.com/pic1.jpg" если есть
+  },
+  {
+    text: "Какой объект метаданных отвечает за хранение данных?",
+    options: ["Справочник", "Документ", "Регистр сведений", "Все перечисленные"],
+    correct: 3,
+    explanation: "Все эти объекты могут хранить данные",
+    image: ""
+  },
+  {
+    text: "Как правильно написать комментарий в запросе?",
+    options: ["// комментарий", "/* комментарий */", "-- комментарий", "все варианты"],
+    correct: 3,
+    explanation: "В языке запросов 1С используются -- и /* */",
+    image: ""
+  }
+  // добавляйте сколько угодно вопросов сюда
+];
+
+let current = 0;
+let score = 0;
+let answered = false;
+
+// ──────────────────────────────────────────────
+
+function startTraining() {
+  document.getElementById("start-screen").classList.add("hidden");
+  document.getElementById("quiz").classList.remove("hidden");
+  showQuestion();
+}
+
+function showQuestion() {
+  if (current >= questions.length) {
+    finishQuiz();
+    return;
+  }
+
+  answered = false;
+  const q = questions[current];
+  
+  document.getElementById("question-text").innerText = (current+1) + ". " + q.text;
+  document.getElementById("progress").innerText = `Вопрос ${current+1} из ${questions.length} • ${score} правильных`;
+  
+  // изображение (если есть)
+  const imgDiv = document.getElementById("image-container");
+  imgDiv.innerHTML = "";
+  if (q.image) {
+    const img = document.createElement("img");
+    img.src = q.image;
+    img.style.maxWidth = "100%";
+    img.style.margin = "15px 0";
+    imgDiv.appendChild(img);
+  }
+
+  // варианты
+  const optsDiv = document.getElementById("options");
+  optsDiv.innerHTML = "";
+  q.options.forEach((text, i) => {
+    const label = document.createElement("label");
+    label.innerHTML = `<input type="radio" name="ans" value="${i}"> ${String.fromCharCode(65+i)}) ${text}`;
+    optsDiv.appendChild(label);
+  });
+
+  document.getElementById("result").classList.add("hidden");
+  document.getElementById("controls").classList.add("hidden");
+  document.getElementById("submit-btn").disabled = false;
+}
+
+function checkAnswer() {
+  if (answered) return;
+  
+  const radios = document.getElementsByName("ans");
+  let selected = -1;
+  for (let r of radios) {
+    if (r.checked) { selected = parseInt(r.value); break; }
+  }
+  
+  if (selected === -1) {
+    alert("Выберите вариант ответа");
+    return;
+  }
+
+  answered = true;
+  const q = questions[current];
+  const isCorrect = selected === q.correct;
+
+  if (isCorrect) score++;
+
+  const resultDiv = document.getElementById("result");
+  resultDiv.classList.remove("hidden");
+  resultDiv.className = isCorrect ? "correct" : "wrong";
+  
+  let html = isCorrect ? "✅ Правильно!" : "❌ Неверно";
+  html += `<div class="explanation">Правильный ответ: ${String.fromCharCode(65 + q.correct)}) ${q.options[q.correct]}<br>${q.explanation}</div>`;
+  
+  resultDiv.innerHTML = html;
+
+  document.getElementById("submit-btn").disabled = true;
+  document.getElementById("controls").classList.remove("hidden");
+}
+
+function nextQuestion() {
+  current++;
+  showQuestion();
+}
+
+function finishQuiz() {
+  document.getElementById("question-text").innerText = "Тренировка завершена!";
+  document.getElementById("options").innerHTML = "";
+  document.getElementById("submit-btn").classList.add("hidden");
+  
+  const resultDiv = document.getElementById("result");
+  resultDiv.classList.remove("hidden", "correct", "wrong");
+  resultDiv.style.background = "#f0f8ff";
+  resultDiv.innerHTML = `<strong>Результат: ${score} из ${questions.length}</strong><br>(${Math.round(score/questions.length*100)}%)`;
+  
+  document.getElementById("controls").innerHTML = '<button onclick="location.reload()">Начать заново</button>';
+}
+</script>
+
+</body>
+</html>
