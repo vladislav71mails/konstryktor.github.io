@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Новый Калькулятор ЗП для Инженеров 1-й Линии</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f9;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .calculator-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 30px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 {
+            text-align: center;
+            color: #065f46;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #4b5563;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: #f9fafb;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            border-color: #065f46;
+            outline: none;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #065f46;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #047857;
+        }
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f0f8f0;
+            border-radius: 8px;
+            border: 1px solid #d1fae5;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .result-item.warning {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .result-item.total {
+            font-weight: bold;
+            font-size: 18px;
+            background: #d1fae5;
+        }
+        .help-text {
+            font-size: 0.85em;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        .shift-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <h1>Новый Калькулятор ЗП для Инженеров 1-й Линии</h1>
+        <form id="salaryForm">
+            <div class="form-group">
+                <label for="employeeName">ФИО сотрудника:</label>
+                <input type="text" id="employeeName" value="Тестовый Сотрудник" required>
+            </div>
+            <div class="form-group">
+                <label for="grade">Грейд:</label>
+                <select id="grade" required>
+                    <option value="Easy">Easy</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="Hard">Hard</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="position">Должность:</label>
+                <select id="position" required>
+                    <option value="Младший инженер">Младший инженер</option>
+                    <option value="Инженер" selected>Инженер</option>
+                    <option value="Старший инженер">Старший инженер</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="month">Месяц расчета:</label>
+                <select id="month" required>
+                    <option value="0">Январь</option>
+                    <option value="1">Февраль</option>
+                    <option value="2">Март</option>
+                    <!-- Добавьте остальные месяцы -->
+                </select>
+                <div class="help-text">Норма часов: <span id="hoursNorm">160</span> часов</div>
+            </div>
+            <div class="form-group">
+                <label for="workHours">Отработано часов:</label>
+                <input type="number" id="workHours" min="0" step="0.5" value="160" required>
+            </div>
+            <div class="form-group">
+                <label for="closedTasks">Закрыто задач:</label>
+                <input type="number" id="closedTasks" min="0" value="300" required>
+            </div>
+            <div class="form-group">
+                <label>Дежурные смены (минимум: 4 расширенные, 2 ночные, 1 выходная):</label>
+                <div class="shift-group">
+                    <div>
+                        <label for="extendedShifts">Расширенные смены:</label>
+                        <input type="number" id="extendedShifts" min="0" value="4" required>
+                    </div>
+                    <div>
+                        <label for="nightShifts">Ночные смены:</label>
+                        <input type="number" id="nightShifts" min="0" value="2" required>
+                    </div>
+                    <div>
+                        <label for="weekendShifts">Выходные смены:</label>
+                        <input type="number" id="weekendShifts" min="0" value="1" required>
+                    </div>
+                </div>
+                <div class="help-text">Если смена сокращена координатором - засчитывается, но часы уменьшаются.</div>
+            </div>
+            <div class="form-group">
+                <label for="vacationDays">Дни отпуска/больничного:</label>
+                <input type="number" id="vacationDays" min="0" max="31" value="0" required>
+                <div class="help-text">Смены и премия сокращаются пропорционально.</div>
+            </div>
+            <div class="form-group">
+                <label for="teamBonus">Командная премия:</label>
+                <input type="number" id="teamBonus" min="0" value="0">
+                <div class="help-text">Перераспределяется для топовых сотрудников при выровненном графике.</div>
+            </div>
+            <div class="form-group">
+                <label for="normativeHistory">Норматив за последние 3 месяца (закрыто/3):</label>
+                <input type="number" id="normativeHistory" min="0" max="3" value="2" required>
+                <div class="help-text">Минимум 2 для выплаты премии. Если <2 - снижение премии.</div>
+            </div>
+            <div class="form-group">
+                <label for="proCertificate">Сдача 1С Профессионал (для Старшего):</label>
+                <select id="proCertificate">
+                    <option value="yes">Да</option>
+                    <option value="no">Нет (просрочка)</option>
+                </select>
+                <div class="help-text">За просрочку - минус 10% от максимальной премии за месяц.</div>
+            </div>
+            <button type="submit">Рассчитать ЗП</button>
+        </form>
+        <div class="results" id="results" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Параметры из старого калькулятора (адаптированные)
+        const settings = {
+            taxRate: 13,
+            taskBonusRates: { Easy: 45.98, Medium: 60, Hard: 90 },
+            taskNorms: { Easy: 200, Medium: 275, Hard: 235 }, // Можно снизить по новым правилам
+            hourlyRates: { 'Младший инженер': 139.33, 'Инженер': 195.05, 'Старший инженер': 290.15 },
+            normativeBonuses: { 'Младший инженер': { Easy: 3448 }, 'Инженер': { Medium: 5748 }, 'Старший инженер': { Hard: 18391 } },
+            minShifts: { extended: 4, night: 2, weekend: 1 },
+            workingHoursNorm: 160, // Базовая норма
+            maxGradeBonus: { Easy: 5000, Medium: 8000, Hard: 16000 } // Примерные значения премии за грейд
+        };
+
+        const form = document.getElementById('salaryForm');
+        const resultsDiv = document.getElementById('results');
+        const hoursNormSpan = document.getElementById('hoursNorm');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            calculateSalary();
+        });
+
+        function calculateSalary() {
+            // Сбор данных
+            const grade = document.getElementById('grade').value;
+            const position = document.getElementById('position').value;
+            const workHours = parseFloat(document.getElementById('workHours').value);
+            const closedTasks = parseInt(document.getElementById('closedTasks').value);
+            const extendedShifts = parseInt(document.getElementById('extendedShifts').value);
+            const nightShifts = parseInt(document.getElementById('nightShifts').value);
+            const weekendShifts = parseInt(document.getElementById('weekendShifts').value);
+            const vacationDays = parseInt(document.getElementById('vacationDays').value);
+            const teamBonus = parseFloat(document.getElementById('teamBonus').value) || 0;
+            const normativeHistory = parseInt(document.getElementById('normativeHistory').value);
+            const proCertificate = document.getElementById('proCertificate').value;
+
+            const hoursNorm = settings.workingHoursNorm;
+            hoursNormSpan.textContent = hoursNorm;
+
+            // Корректировка за отпуск/больничный (пропорционально сокращаем смены и премию)
+            const adjustmentFactor = 1 - (vacationDays / 22); // Пример: 22 рабочих дня в месяц
+
+            // Проверка минимальных смен для премии за грейд
+            const minExtended = settings.minShifts.extended * adjustmentFactor;
+            const minNight = settings.minShifts.night * adjustmentFactor;
+            const minWeekend = settings.minShifts.weekend * adjustmentFactor;
+
+            const shiftsMet = extendedShifts >= minExtended && nightShifts >= minNight && weekendShifts >= minWeekend;
+
+            // Оклад
+            const hourlyRate = settings.hourlyRates[position];
+            const baseSalary = workHours * hourlyRate;
+
+            // Премия за грейд (новая логика)
+            let gradeBonus = 0;
+            let gradeBonusWarning = '';
+            const maxGradeBonus = settings.maxGradeBonus[grade];
+            if (shiftsMet) {
+                gradeBonus = maxGradeBonus * adjustmentFactor;
+                // Проверка истории норматива
+                if (normativeHistory < 2) {
+                    gradeBonus *= 0.5; // Снижение на 50% если <2 из 3
+                    gradeBonusWarning = ' (снижена из-за истории норматива)';
+                }
+                // Для Старшего: проверка сертификата
+                if (position === 'Старший инженер' && proCertificate === 'no') {
+                    gradeBonus *= 0.9; // Минус 10%
+                    gradeBonusWarning += ' (минус 10% за просрочку сертификата)';
+                }
+            } else {
+                gradeBonusWarning = ' (не выплачивается - не выполнены смены)';
+            }
+
+            // KPI (за превышение норматива)
+            const taskNorm = settings.taskNorms[grade] * adjustmentFactor; // Сниженный норматив (пример: умножаем на фактор)
+            const extraTasks = Math.max(0, closedTasks - taskNorm);
+            const taskBonusRate = settings.taskBonusRates[grade];
+            const kpiBonus = extraTasks * taskBonusRate;
+
+            // Сверхурочные (предполагаем > norms)
+            const extraHours = Math.max(0, workHours - hoursNorm);
+            const overtimeRate = hourlyRate * 1.5; // Пример: 1.5x
+            const overtimePay = extraHours * overtimeRate;
+
+            // Итог
+            const subtotal = baseSalary + gradeBonus + kpiBonus + overtimePay + teamBonus;
+            const tax = subtotal * (settings.taxRate / 100);
+            const total = subtotal - tax;
+
+            // Вывод результатов
+            resultsDiv.innerHTML = `
+                <div class="result-item"><span>Оклад:</span><span>${baseSalary.toFixed(2)} ₽</span></div>
+                <div class="result-item ${gradeBonus === 0 ? 'warning' : ''}"><span>Премия за грейд${gradeBonusWarning}:</span><span>${gradeBonus.toFixed(2)} ₽</span></div>
+                <div class="result-item"><span>KPI (сверх ${taskNorm.toFixed(0)} задач):</span><span>${kpiBonus.toFixed(2)} ₽</span></div>
+                <div class="result-item"><span>Сверхурочные:</span><span>${overtimePay.toFixed(2)} ₽</span></div>
+                <div class="result-item"><span>Командная премия:</span><span>${teamBonus.toFixed(2)} ₽</span></div>
+                <div class="result-item"><span>Итого без налога:</span><span>${subtotal.toFixed(2)} ₽</span></div>
+                <div class="result-item"><span>НДФЛ 13%:</span><span>-${tax.toFixed(2)} ₽</span></div>
+                <div class="result-item total"><span>На руки:</span><span>${total.toFixed(2)} ₽</span></div>
+            `;
+            resultsDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
