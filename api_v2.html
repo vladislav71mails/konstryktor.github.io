@@ -133,8 +133,8 @@
         window.exec = (cmd, val = null) => { document.execCommand(cmd, false, val); el.editor.focus(); };
         
         window.setTpl = (t) => {
-            if(t==='1-1') el.editor.innerHTML = "<h3>🗓️ План беседы 1-1</h3><p><b>Настроение:</b> </p><p><b>Успехи:</b> </p><p><b>Планы:</b> </p>";
-            if(t==='os') el.editor.innerHTML = "<h3>💬 Обратная связь</h3><p><b>Кейс:</b> </p><p><span style='color:#D92400'><b>ОШИБКА:</b></span> </p><p><b>Что исправить:</b> </p>";
+            if(t==='1-1') el.editor.innerHTML = "<h3>План беседы 1-1</h3><p><b>Настроение:</b> </p><p><b>Успехи:</b> </p><p><b>Планы:</b> </p>";
+            if(t==='os') el.editor.innerHTML = "<h3>Обратная связь</h3><p><b>Кейс:</b> </p><p><span style='color:#D92400'><b>ОШИБКА:</b></span> </p><p><b>Что исправить:</b> </p>";
             document.getElementById('type').value = (t==='1-1') ? '56be626109f0' : 'b5618cb28517';
         };
 
