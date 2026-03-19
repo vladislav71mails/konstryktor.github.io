@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouGile</title>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body { background: #eef2f7; margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
+        .container { max-width: 1100px; width: 100%; background: white; border-radius: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; }
+        .header { background: #0b1f33; color: white; padding: 24px 30px; }
+        .header h1 { margin: 0; font-weight: 500; font-size: 1.8rem; }
+        .content { padding: 30px; }
+        
+        /* Блок токена */
+        .api-box { background: #fff4f4; border-radius: 20px; padding: 18px 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; border: 1px solid #f2cfcf; }
+        .api-box input { flex: 1; padding: 12px 18px; border: 1px solid #e5b3b3; border-radius: 60px; outline: none; }
+        
+        /* Состав команд через details */
+        summary { color: #1e3f6e; font-weight: 600; cursor: pointer; margin-bottom: 10px; outline: none; }
+        .state-sample { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 15px; font-size: 0.85rem; color: #6c757d; line-height: 1.6; }
+        
+        .search-section { background: #ffffff; border: 2px solid #e3ebf6; border-radius: 28px; padding: 22px 26px; margin-bottom: 20px; margin-top: 10px; }
+        .search-row { display: flex; gap: 12px; }
+        .search-row input { flex: 1; padding: 14px 20px; border: 1px solid #c1d3e8; border-radius: 40px; outline: none; }
+        
+        .btn { background: white; border: 1.5px solid #b9cee8; padding: 12px 28px; border-radius: 40px; font-weight: 600; color: #1e3a6b; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background: #1e3f6e; border-color: #1e3f6e; color: white; }
+        .btn:hover { opacity: 0.8; }
+
+        .result-card { background: #eaf1fd; border-radius: 22px; padding: 20px 26px; margin: 20px 0; border-left: 6px solid #2563eb; }
+        .column-preview { background: #ffffffc7; border-radius: 18px; padding: 14px 20px; display: flex; flex-wrap: wrap; gap: 10px 20px; border: 1px solid white; font-size: 0.85rem; margin-top: 10px; }
+        .column-preview code { background: #f1f3f5; padding: 2px 6px; border-radius: 4px; color: #d63384; font-family: monospace; }
+
+        /* Форма задачи */
+        .task-form { background: #fafdff; border-radius: 26px; padding: 22px 26px; border: 1px solid #d1e0f2; }
+        .form-group { margin-bottom: 18px; }
+        .form-group label { font-weight: 600; color: #1e3f6e; display: block; margin-bottom: 8px; }
+        
+        /* Визуальный редактор */
+        .editor-container { border: 1px solid #c5d6ef; border-radius: 20px; background: white; overflow: hidden; }
+        .toolbar { background: #f1f5f9; padding: 10px; display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid #c5d6ef; }
+        .btn-tool { padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
+        #visualEditor { min-height: 180px; padding: 15px; outline: none; overflow-y: auto; line-height: 1.5; }
+
+        /* Логи */
+        .log-area { background: #ffffff; border: 1px solid #d1e0f2; color: #1e3f6e; border-radius: 22px; padding: 20px; font-size: 0.9rem; line-height: 1.6; max-height: 200px; overflow-y: auto; margin-top: 20px; }
+        .log-link { color: #2563eb; text-decoration: underline; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>API YouGile: создание задач</h1></div>
+    <div class="content">
+        
+        <div class="api-box">
+            <label>🔑 API Токен:</label>
+            <input type="password" id="apiToken" placeholder="Введите ключ">
+        </div>
+
+        <details style="margin-bottom: 20px;">
+            <summary>Состав команд</summary>
+            <div class="state-sample" id="statesDump">Для загрузки списка введите токен и нажмите "Обновить".</div>
+        </details>
+
+        <div class="search-section">
+            <div class="search-row">
+                <input type="text" id="searchInput" placeholder="Фамилия сотрудника...">
+                <button class="btn btn-primary" id="searchBtn">Найти</button>
+                <button class="btn" id="refreshBtn">Обновить список команды</button>
+            </div>
+        </div>
+
+        <div id="matchResult" class="result-card" style="display: none;">
+            <div id="matchText" style="font-size: 1.1rem; font-weight: bold;"></div>
+            <div class="column-preview" id="columnPreview"></div>
+        </div>
+
+        <div class="task-form" id="taskForm" style="display: none;">
+            <div class="form-group">
+                <label>Название задачи</label>
+                <input type="text" id="taskTitle" style="width:100%; padding:12px 18px; border-radius:40px; border:1px solid #c5d6ef; outline:none;">
+            </div>
+
+            <div class="form-group">
+                <label>Описание взаимодействия</label>
+                <div class="editor-container">
+                    <div class="toolbar">
+                        <button class="btn-tool" onclick="exec('bold')">B</button>
+                        <button class="btn-tool" style="background:#EBA3A1" onclick="exec('backColor', '#EBA3A1')">Маркер</button>
+                        <button class="btn-tool" onclick="setTpl('1-1')">Шаблон 1-1</button>
+                        <button class="btn-tool" onclick="setTpl('os')">Шаблон ОС</button>
+                    </div>
+                    <div id="visualEditor" contenteditable="true"></div>
+                </div>
+            </div>
+
+<div style="display:flex; gap:15px;">
+    <div style="flex:1">
+        <label>Приоритет</label>
+        <select id="prio" style="width:100%; padding:10px; border-radius:15px; border:1px solid #c5d6ef;">
+            <option value="">Не указывать</option> <option value="de9d3634210c" selected>Нормально</option>
+            <option value="77f95e6fdafe">Срочно</option>
+            <option value="0578465c91b0">Критично</option>
+        </select>
+    </div>
+    <div style="flex:1">
+        <label>Тип</label>
+        <select id="type" style="width:100%; padding:10px; border-radius:15px; border:1px solid #c5d6ef;">
+            <option value="">Не указывать</option> <option value="56be626109f0">1-1</option>
+            <option value="b5618cb28517">ОС</option>
+            <option value="5543067a9b02">Контроль</option>
+        </select>
+    </div>
+</div>
+            <button class="btn btn-primary" id="createBtn" style="width:100%; margin-top:20px;">Создать задачу</button>
+        </div>
+
+        <div class="log-area" id="log">📘 Ожидание токена для начала работы...</div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const TEAMS = [
+            { leader: 'Яловая А.', boardId: '9c341ee1-69f9-4359-8215-fd16fbeb4bc6', columnId: 'ed8fbcae-097f-4cc2-86f2-00daf70d05da', stickerStateId: '80ec68f5-0e17-4947-8e6b-9ff0007af782', teamName: 'Команда Яловой', states: [] },
+            { leader: 'Онищук А.', boardId: 'e8d0ea7d-2442-4a7c-9771-c005021fb563', columnId: '0d1b5ee8-2eee-4849-9da2-e8313088776b', stickerStateId: '9c5fd932-67f0-4dd8-b421-0806401e1fcd', teamName: 'Команда Онищук А.', states: [] },
+            { leader: '<b>замещает</b> Яловая А.', boardId: 'cda5ed35-ef79-47a7-97fb-c4951c9c42ed', columnId: 'ed8fbcae-097f-4cc2-86f2-00daf70d05da', stickerStateId: '2bfa2a7a-3377-4141-9c99-ee403b903d1e', teamName: 'Команда Прохин Е.', states: [] },
+            { leader: 'Ткаченко К.', boardId: 'c60340f9-a081-4245-afbe-06c0b45807dd', columnId: '6c9fe2f8-08fd-4571-817b-5f421780a847', stickerStateId: 'f4ddaa20-a040-4e9f-b4f5-047d12eb1012', teamName: 'Команда Ткаченко К.', states: [] }
+        ];
+
+        const el = { token: document.getElementById('apiToken'), search: document.getElementById('searchInput'), editor: document.getElementById('visualEditor'), log: document.getElementById('log'), dump: document.getElementById('statesDump'), title: document.getElementById('taskTitle') };
+        let curMatch = null;
+
+        window.exec = (cmd, val = null) => { document.execCommand(cmd, false, val); el.editor.focus(); };
+        
+        window.setTpl = (t) => {
+            if(t==='1-1') el.editor.innerHTML = "<h3>План беседы 1-1</h3><p><b>Настроение:</b> </p><p><b>Успехи:</b> </p><p><b>Планы:</b> </p>";
+            if(t==='os') el.editor.innerHTML = "<h3>Обратная связь</h3><p><b>Кейс:</b> </p><p><span style='color:#D92400'><b>ОШИБКА:</b></span> </p><p><b>Что исправить:</b> </p>";
+            document.getElementById('type').value = (t==='1-1') ? '56be626109f0' : 'b5618cb28517';
+        };
+
+        function addLog(msg, isErr = false) {
+            const prefix = isErr ? '❌' : '📘';
+            el.log.innerHTML = `<div>${prefix} ${msg}</div>` + el.log.innerHTML;
+        }
+
+        async function loadData() {
+            const token = el.token.value.trim();
+            if(!token) return addLog('Введите токен для загрузки', true);
+            
+            addLog('🔄 Загружаем состояния команд...');
+            let dumpHtml = "";
+            let count = 0;
+
+            for(const t of TEAMS) {
+                try {
+                    const r = await fetch(`https://yougile.com/api-v2/string-stickers?name=${encodeURIComponent(t.teamName)}`, { headers: {'Authorization': `Bearer ${token}`} });
+                    const d = await r.json();
+                    const s = (d.content || []).find(i => i.id === t.stickerStateId);
+                    if(s) { 
+                        t.states = s.states; 
+                        dumpHtml += `${t.leader} (${t.states.length}): ${t.states.map(i=>i.name).join(', ')}<br>`; 
+                        addLog(`✅ ${t.teamName}: загружено ${t.states.length} сотрудников`);
+                        count++;
+                    }
+                } catch(e) { addLog(`Ошибка при загрузке ${t.teamName}`, true); }
+            }
+            el.dump.innerHTML = dumpHtml;
+            addLog(`Загрузка завершена. Успешно: ${count} команд`);
+        }
+
+        document.getElementById('searchBtn').onclick = async () => {
+            if(!TEAMS[0].states.length) await loadData();
+            const q = el.search.value.toLowerCase().trim();
+            if(!q) return;
+
+            for(const t of TEAMS) {
+                const s = t.states.find(i => i.name.toLowerCase().includes(q));
+                if(s) {
+                    curMatch = { sName: s.name, sId: s.id, colId: t.columnId, stickId: t.stickerStateId, bId: t.boardId, leader: t.leader };
+                    document.getElementById('matchResult').style.display = 'block';
+                    document.getElementById('taskForm').style.display = 'block';
+                    el.title.value = `Взаимодействие: ${s.name}`;
+                    document.getElementById('matchText').innerHTML = `✅ Найден: <b>${s.name}</b> (команда ${t.leader}) · запрос "${q}"`;
+                    document.getElementById('columnPreview').innerHTML = `<span>Колонка: <code>${t.columnId}</code></span> <span>👤 Тех.лид: ${t.leader}</span> <span>🏷️ Стикер: <code>${t.stickerStateId}</code> → <code>${s.id}</code></span>`;
+                    return;
+                }
+            }
+            addLog(`Сотрудник "${q}" не найден`, true);
+        };
+
+        document.getElementById('createBtn').onclick = async () => {
+            const btn = document.getElementById('createBtn');
+            btn.disabled = true;
+            
+// 1. Обязательный стикер сотрудника
+    const sticks = { 
+        [curMatch.stickId]: curMatch.sId 
+    };
+
+    // 2. Проверка Приоритета (добавляем только если не пусто)
+    const prioVal = document.getElementById('prio').value;
+    if (prioVal) {
+        sticks['5228de7a-b869-4330-a6b0-22fc24834cf6'] = prioVal;
+    }
+
+    // 3. Проверка Типа (добавляем только если не пусто)
+    const typeVal = document.getElementById('type').value;
+    if (typeVal) {
+        sticks['bca4c04e-04cb-42fb-b380-e2e00e3fb780'] = typeVal;
+    }
+
+    const payload = {
+        title: el.title.value,
+        description: `<h2>${curMatch.sName}</h2><hr>${el.editor.innerHTML}`,
+        columnId: curMatch.colId,
+        stickers: sticks
+    };
+
+            try {
+                const r = await fetch('https://yougile.com/api-v2/tasks', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${el.token.value}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const res = await r.json();
+                if(r.ok) {
+                    addLog(`✅ Задача создана! <a href="https://yougile.com/team/${curMatch.bId}#task=${res.id}" target="_blank" class="log-link">ОТКРЫТЬ</a>, но ссылка не работает))`);
+                } else { addLog(`Ошибка API: ${res.message || 'неизвестно'}`, true); }
+            } catch(e) { addLog('Ошибка сети при создании задачи', true); }
+            finally { btn.disabled = false; }
+        };
+
+        document.getElementById('refreshBtn').onclick = loadData;
+        el.search.onkeypress = (e) => { if(e.key==='Enter') document.getElementById('searchBtn').click(); };
+    })();
+</script>
+</body>
+</html>
