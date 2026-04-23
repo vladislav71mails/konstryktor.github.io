@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Редактор ibases.v8i — Расширенный функционал</title>
+    <style>
+        :root {
+            --1c-yellow: #ffdb4d;
+            --1c-bg: #f2f2f2;
+            --1c-border: #a0a0a0;
+            --1c-selected: #cce8ff;
+            --1c-btn-bg: #eeeeee;
+        }
+
+        body {
+            background-color: #e6e6e6;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            margin: 0; padding: 20px;
+            display: flex; justify-content: center;
+        }
+
+        .window {
+            width: 850px; height: 650px;
+            background: var(--1c-bg);
+            border: 1px solid var(--1c-border);
+            display: flex; flex-direction: column;
+            box-shadow: 4px 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .title-bar {
+            background: var(--1c-yellow);
+            padding: 8px 12px; font-weight: bold;
+            border-bottom: 1px solid var(--1c-border);
+            display: flex; justify-content: space-between;
+        }
+
+        .main-content {
+            display: flex; flex: 1; overflow: hidden; padding: 10px; gap: 10px;
+        }
+
+        /* Список баз */
+        .list-wrapper {
+            flex: 1; display: flex; flex-direction: column; gap: 5px;
+        }
+
+        .list-container {
+            flex: 1; background: white;
+            border: 1px solid var(--1c-border);
+            overflow-y: auto;
+        }
+
+        .base-item {
+            padding: 4px 8px; cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .base-item:hover { background: #f5faff; }
+        .base-item.active-row { background: var(--1c-selected); }
+
+        .base-item input[type="checkbox"] { cursor: pointer; }
+
+        /* Панель кнопок */
+        .button-panel {
+            width: 180px; display: flex; flex-direction: column; gap: 6px;
+        }
+
+        button {
+            padding: 6px; border: 1px solid var(--1c-border);
+            background: white; cursor: pointer; text-align: center;
+            font-size: 12px; outline: none;
+        }
+
+        button:hover { background: var(--1c-btn-bg); }
+        .btn-bold { font-weight: bold; }
+        .btn-bold-start{background: #22692e;    color: #ffffff;}
+        .btn-danger { color: #a00; }
+
+        /* Нижняя часть */
+        .preview-section {
+            height: 120px; padding: 0 10px 10px 10px;
+        }
+        #output {
+            width: 100%; height: 100%; border: 1px solid var(--1c-border);
+            font-family: 'Courier New', monospace; font-size: 11px;
+            resize: none; box-sizing: border-box; background: #fff;
+        }
+
+        /* Модалка */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.3);
+            display: none; justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal {
+            background: var(--1c-bg); border: 1px solid var(--1c-border);
+            width: 550px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; margin-bottom: 3px; font-weight: bold; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 4px; border: 1px solid var(--1c-border);
+            box-sizing: border-box; font-size: 13px;
+        }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="window">
+    <div class="title-bar">
+        <span>Конструктор списка баз 1С</span>
+        <span>1С</span>
+    </div>
+    
+    <div class="main-content">
+        <div class="list-wrapper">
+            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                <button onclick="massSelect(true)">Выделить все</button>
+                <button onclick="massSelect(false)">Снять выделение</button>
+                <button class="btn-danger" onclick="deleteMassive()">Удалить выделенные</button>
+            </div>
+            <div class="list-container" id="listContainer"></div>
+        </div>
+        
+        <div class="button-panel">
+            <button class="btn-bold" onclick="openModal('add')">Добавить...</button>
+            <button onclick="openModal('edit')">Изменить...</button>
+            <button onclick="deleteSingle()">Удалить</button>
+            <div style="flex:1"></div>
+            <button onclick="importFromClipboard()">Импорт списка из буфера</button>
+            <button onclick="fileInput.click()">Загрузить ibases.v8i</button>
+            <button class="btn-bold-start" onclick="downloadV8I()">Выгрузить ibases.v8i</button>
+            <input type="file" id="fileInput" style="display:none" accept=".v8i">
+        </div>
+    </div>
+
+    <div class="preview-section">
+        <textarea id="output" readonly placeholder="Здесь будет содержимое ibases.v8i"></textarea>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <h3 id="modalTitle" style="margin-top:0">Параметры информационной базы</h3>
+        
+        <div class="form-group">
+            <label>Наименование:</label>
+            <input type="text" id="f_name">
+        </div>
+
+        <div class="form-group">
+            <label>Тип расположения:</label>
+            <select id="f_type" onchange="toggleType()">
+                <option value="File">На данном компьютере или в локальной сети</option>
+                <option value="Srvr">На сервере 1С:Предприятия</option>
+                <option value="ws">На веб-сервере</option>
+            </select>
+        </div>
+
+        <div id="group_file" class="form-group">
+            <label>Каталог информационной базы:</label>
+            <input type="text" id="f_file">
+        </div>
+
+        <div id="group_srvr" class="form-group hidden">
+            <label>Кластер серверов:</label>
+            <input type="text" id="f_srvr">
+            <label style="margin-top:5px; display:block;">Имя базы в кластере:</label>
+            <input type="text" id="f_ref">
+        </div>
+
+        <div id="group_ws" class="form-group hidden">
+            <label>Адрес веб-сервера:</label>
+            <input type="text" id="f_ws" placeholder="https://server/base">
+        </div>
+
+        <div class="form-group">
+            <label>Дополнительные параметры запуска:</label>
+            <input type="text" id="f_params">
+        </div>
+
+        <div class="form-group">
+            <label>ID (GUID):</label>
+            <div style="display:flex; gap:5px">
+                <input type="text" id="f_id" readonly>
+                <button onclick="generateID()">Создать новый</button>
+            </div>
+        </div>
+
+        <div class="modal-buttons" style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
+            <button onclick="saveBase()" class="btn-bold" style="width:100px">Далее ></button>
+            <button onclick="closeModal()" style="width:100px">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let bases = [];
+    let activeIdx = null; // Индекс для "Изменить"
+    let currentMode = 'add';
+
+    const listContainer = document.getElementById('listContainer');
+    const outputText = document.getElementById('output');
+    const overlay = document.getElementById('modalOverlay');
+    const fileInput = document.getElementById('fileInput');
+
+    // --- Логика Парсинга ---
+    function parseV8IText(text) {
+        const result = [];
+        const sections = text.split(/\[(.*?)\]/);
+        for (let i = 1; i < sections.length; i += 2) {
+            const name = sections[i].trim();
+            const body = sections[i + 1] || "";
+            const baseObj = { name, selected: false };
+            body.split('\n').forEach(line => {
+                const parts = line.split('=');
+                if (parts.length >= 2) {
+                    baseObj[parts[0].trim()] = parts.slice(1).join('=').trim();
+                }
+            });
+            result.push(baseObj);
+        }
+        return result;
+    }
+
+    // --- Рендер ---
+    function render() {
+        listContainer.innerHTML = '';
+        bases.forEach((b, idx) => {
+            const div = document.createElement('div');
+            div.className = `base-item ${activeIdx === idx ? 'active-row' : ''}`;
+            
+            const chk = document.createElement('input');
+            chk.type = 'checkbox';
+            chk.checked = b.selected;
+            chk.onclick = (e) => { e.stopPropagation(); b.selected = chk.checked; updateOutput(); };
+
+            const label = document.createElement('span');
+            label.textContent = b.name;
+            label.style.flex = "1";
+
+            div.onclick = () => { activeIdx = idx; render(); };
+            div.ondblclick = () => openModal('edit');
+
+            div.appendChild(chk);
+            div.appendChild(label);
+            listContainer.appendChild(div);
+        });
+        updateOutput();
+    }
+
+    function updateOutput() {
+        let text = "";
+        bases.forEach(b => {
+            text += `[${b.name}]\n`;
+            for (let key in b) {
+                if (['name', 'selected'].includes(key)) continue;
+                text += `${key}=${b[key]}\n`;
+            }
+        });
+        outputText.value = text;
+    }
+
+    // --- Массовые действия ---
+    function massSelect(state) {
+        bases.forEach(b => b.selected = state);
+        render();
+    }
+
+    function deleteMassive() {
+        const count = bases.filter(b => b.selected).length;
+        if (count > 0 && confirm(`Удалить выбранные базы (${count} шт.)?`)) {
+            bases = bases.filter(b => !b.selected);
+            activeIdx = null;
+            render();
+        }
+    }
+
+    function deleteSingle() {
+        if (activeIdx !== null && confirm('Удалить информационную базу?')) {
+            bases.splice(activeIdx, 1);
+            activeIdx = null;
+            render();
+        }
+    }
+
+    // --- Работа с модальным окном ---
+    function openModal(mode) {
+        currentMode = mode;
+        if (mode === 'edit') {
+            if (activeIdx === null) return alert('Выберите базу из списка');
+            const b = bases[activeIdx];
+            document.getElementById('f_name').value = b.name;
+            document.getElementById('f_id').value = b.ID || '';
+            document.getElementById('f_params').value = b.AdditionalParameters || '';
+            
+            // Определяем тип по строке Connect
+            const conn = b.Connect || '';
+            if (conn.startsWith('ws=')) {
+                document.getElementById('f_type').value = 'ws';
+                document.getElementById('f_ws').value = conn.match(/ws="(.*?)"/)?.[1] || '';
+            } else if (conn.startsWith('Srvr=')) {
+                document.getElementById('f_type').value = 'Srvr';
+                document.getElementById('f_srvr').value = conn.match(/Srvr="(.*?)"/)?.[1] || '';
+                document.getElementById('f_ref').value = conn.match(/Ref="(.*?)"/)?.[1] || '';
+            } else {
+                document.getElementById('f_type').value = 'File';
+                document.getElementById('f_file').value = conn.match(/File="(.*?)"/)?.[1] || '';
+            }
+        } else {
+            document.getElementById('f_name').value = 'Новая база';
+            document.getElementById('f_file').value = '';
+            document.getElementById('f_srvr').value = '';
+            document.getElementById('f_ref').value = '';
+            document.getElementById('f_ws').value = '';
+            document.getElementById('f_params').value = '';
+            generateID();
+        }
+        toggleType();
+        overlay.style.display = 'flex';
+    }
+
+    function closeModal() { overlay.style.display = 'none'; }
+
+    function toggleType() {
+        const t = document.getElementById('f_type').value;
+        document.getElementById('group_file').className = t === 'File' ? 'form-group' : 'form-group hidden';
+        document.getElementById('group_srvr').className = t === 'Srvr' ? 'form-group' : 'form-group hidden';
+        document.getElementById('group_ws').className = t === 'ws' ? 'form-group' : 'form-group hidden';
+    }
+
+    function generateID() { document.getElementById('f_id').value = crypto.randomUUID(); }
+
+    function saveBase() {
+        const type = document.getElementById('f_type').value;
+        let connStr = "";
+        if (type === 'File') connStr = `File="${document.getElementById('f_file').value}";`;
+        else if (type === 'Srvr') connStr = `Srvr="${document.getElementById('f_srvr').value}";Ref="${document.getElementById('f_ref').value}";`;
+        else if (type === 'ws') connStr = `ws="${document.getElementById('f_ws').value}";`;
+
+        const newBase = {
+            name: document.getElementById('f_name').value,
+            Connect: connStr,
+            ID: document.getElementById('f_id').value,
+            OrderInList: "16384",
+            Folder: "/",
+            Version: "8.3",
+            selected: false
+        };
+
+        const params = document.getElementById('f_params').value;
+        if (params) newBase.AdditionalParameters = params;
+
+        if (currentMode === 'add') bases.push(newBase);
+        else bases[activeIdx] = newBase;
+
+        closeModal();
+        render();
+    }
+
+    // --- Буфер и Файлы ---
+    async function importFromClipboard() {
+        try {
+            const text = await navigator.clipboard.readText();
+            const imported = parseV8IText(text);
+            if (imported.length > 0) {
+                bases = [...bases, ...imported];
+                render();
+            }
+        } catch (e) { alert("Ошибка доступа к буферу. Проверьте разрешения."); }
+    }
+
+    fileInput.onchange = (e) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const imported = parseV8IText(ev.target.result);
+            bases = [...bases, ...imported];
+            render();
+        };
+        reader.readAsText(e.target.files[0]);
+    };
+
+    function downloadV8I() {
+        const blob = new Blob([outputText.value], {type: 'text/plain'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'ibases.v8i';
+        a.click();
+    }
+
+    render();
+</script>
+</body>
+</html>
