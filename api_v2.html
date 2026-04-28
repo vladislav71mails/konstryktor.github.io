@@ -123,10 +123,42 @@
 <script>
     (function() {
         const TEAMS = [
-            { leader: 'Яловая А.', boardId: '9c341ee1-69f9-4359-8215-fd16fbeb4bc6', columnId: 'ed8fbcae-097f-4cc2-86f2-00daf70d05da', stickerStateId: '80ec68f5-0e17-4947-8e6b-9ff0007af782', teamName: 'Команда Яловой', states: [] },
-            { leader: 'Онищук А.', boardId: 'e8d0ea7d-2442-4a7c-9771-c005021fb563', columnId: '0d1b5ee8-2eee-4849-9da2-e8313088776b', stickerStateId: '9c5fd932-67f0-4dd8-b421-0806401e1fcd', teamName: 'Команда Онищук А.', states: [] },
-            { leader: 'Прохин E', boardId: 'cda5ed35-ef79-47a7-97fb-c4951c9c42ed', columnId: '6edd32b5-1ba8-45e6-94d0-2176e73255ce', stickerStateId: '2bfa2a7a-3377-4141-9c99-ee403b903d1e', teamName: 'Команда Прохин Е.', states: [] },
-            { leader: 'Ткаченко К.', boardId: 'c60340f9-a081-4245-afbe-06c0b45807dd', columnId: '6c9fe2f8-08fd-4571-817b-5f421780a847', stickerStateId: 'f4ddaa20-a040-4e9f-b4f5-047d12eb1012', teamName: 'Команда Ткаченко К.', states: [] }
+            { 
+                leader: 'Яловая А.', 
+                boardId: '9c341ee1-69f9-4359-8215-fd16fbeb4bc6', 
+                columnId: 'ed8fbcae-097f-4cc2-86f2-00daf70d05da', 
+                stickerStateId: '80ec68f5-0e17-4947-8e6b-9ff0007af782', 
+                teamName: 'Команда Яловой',
+                projectPath: 'Менеджмент-ТП',
+                leaderUrlName: 'Яловая-А'
+            },
+            { 
+                leader: 'Онищук А.', 
+                boardId: 'e8d0ea7d-2442-4a7c-9771-c005021fb563', 
+                columnId: '0d1b5ee8-2eee-4849-9da2-e8313088776b', 
+                stickerStateId: '9c5fd932-67f0-4dd8-b421-0806401e1fcd', 
+                teamName: 'Команда Онищук А.',
+                projectPath: 'Менеджмент-ТП',
+                leaderUrlName: 'Онищук-А'
+            },
+            { 
+                leader: 'Прохин E', 
+                boardId: 'cda5ed35-ef79-47a7-97fb-c4951c9c42ed', 
+                columnId: '6edd32b5-1ba8-45e6-94d0-2176e73255ce', 
+                stickerStateId: '2bfa2a7a-3377-4141-9c99-ee403b903d1e', 
+                teamName: 'Команда Прохин Е.',
+                projectPath: 'Менеджмент-ТП',
+                leaderUrlName: 'Прохин-Е'
+            },
+            { 
+                leader: 'Ткаченко К.', 
+                boardId: 'c60340f9-a081-4245-afbe-06c0b45807dd', 
+                columnId: '6c9fe2f8-08fd-4571-817b-5f421780a847', 
+                stickerStateId: 'f4ddaa20-a040-4e9f-b4f5-047d12eb1012', 
+                teamName: 'Команда Ткаченко К.',
+                projectPath: 'Менеджмент-ТП',
+                leaderUrlName: 'Ткаченко-К'
+            }
         ];
 
         const el = { token: document.getElementById('apiToken'), search: document.getElementById('searchInput'), editor: document.getElementById('visualEditor'), log: document.getElementById('log'), dump: document.getElementById('statesDump'), title: document.getElementById('taskTitle') };
@@ -178,7 +210,16 @@
             for(const t of TEAMS) {
                 const s = t.states.find(i => i.name.toLowerCase().includes(q));
                 if(s) {
-                    curMatch = { sName: s.name, sId: s.id, colId: t.columnId, stickId: t.stickerStateId, bId: t.boardId, leader: t.leader };
+                    curMatch = { 
+                        sName: s.name, 
+                        sId: s.id, 
+                        colId: t.columnId, 
+                        stickId: t.stickerStateId, 
+                        bId: t.boardId, 
+                        leader: t.leader, 
+                        projectPath: t.projectPath, 
+                        leaderUrlName: t.leaderUrlName 
+                    };
                     document.getElementById('matchResult').style.display = 'block';
                     document.getElementById('taskForm').style.display = 'block';
                     el.title.value = `Взаимодействие: ${s.name}`;
@@ -194,42 +235,60 @@
             const btn = document.getElementById('createBtn');
             btn.disabled = true;
             
-// 1. Обязательный стикер сотрудника
-    const sticks = { 
-        [curMatch.stickId]: curMatch.sId 
-    };
+            const sticks = { 
+                [curMatch.stickId]: curMatch.sId 
+            };
 
-    // 2. Проверка Приоритета (добавляем только если не пусто)
-    const prioVal = document.getElementById('prio').value;
-    if (prioVal) {
-        sticks['5228de7a-b869-4330-a6b0-22fc24834cf6'] = prioVal;
-    }
+            const prioVal = document.getElementById('prio').value;
+            if (prioVal) {
+                sticks['5228de7a-b869-4330-a6b0-22fc24834cf6'] = prioVal;
+            }
 
-    // 3. Проверка Типа (добавляем только если не пусто)
-    const typeVal = document.getElementById('type').value;
-    if (typeVal) {
-        sticks['bca4c04e-04cb-42fb-b380-e2e00e3fb780'] = typeVal;
-    }
+            const typeVal = document.getElementById('type').value;
+            if (typeVal) {
+                sticks['bca4c04e-04cb-42fb-b380-e2e00e3fb780'] = typeVal;
+            }
 
-    const payload = {
-        title: el.title.value,
-        description: `<h2>${curMatch.sName}</h2><hr>${el.editor.innerHTML}`,
-        columnId: curMatch.colId,
-        stickers: sticks
-    };
+            const payload = {
+                title: el.title.value,
+                description: `<h2>${curMatch.sName}</h2><hr>${el.editor.innerHTML}`,
+                columnId: curMatch.colId,
+                stickers: sticks
+            };
 
             try {
+                // Создаем задачу
                 const r = await fetch('https://yougile.com/api-v2/tasks', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${el.token.value}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                const res = await r.json();
+                const createRes = await r.json();
+                
                 if(r.ok) {
-                    addLog(`✅ Задача создана! <a href="https://yougile.com/team/${curMatch.bId}#task=${res.id}" target="_blank" class="log-link">ОТКРЫТЬ</a>, но ссылка не работает))`);
-                } else { addLog(`Ошибка API: ${res.message || 'неизвестно'}`, true); }
-            } catch(e) { addLog('Ошибка сети при создании задачи', true); }
-            finally { btn.disabled = false; }
+                    addLog('🔄 Задача создана, получаем ID...');
+                    
+                    // Получаем созданную задачу чтобы узнать idTaskCommon
+                    const getTaskRes = await fetch(`https://yougile.com/api-v2/tasks/${createRes.id}`, {
+                        headers: { 'Authorization': `Bearer ${el.token.value}` }
+                    });
+                    const taskData = await getTaskRes.json();
+                    
+                    // Формируем корректную ссылку с idTaskCommon
+                    const companyId = '4797d3e814d4';
+                    const taskId = taskData.idTaskCommon || taskData.idTaskProject || createRes.id;
+                    const taskUrl = `https://ru.yougile.com/team/${companyId}/${encodeURIComponent(curMatch.projectPath)}/${encodeURIComponent(curMatch.leaderUrlName)}.#${taskId}`;
+                    
+                    addLog(`✅ Задача создана! ID: ${taskId} <a href="${taskUrl}" target="_blank" class="log-link">ОТКРЫТЬ</a>`);
+                } else { 
+                    addLog(`Ошибка API: ${createRes.message || 'неизвестно'}`, true); 
+                }
+            } catch(e) { 
+                addLog('Ошибка сети при создании задачи', true); 
+            }
+            finally { 
+                btn.disabled = false; 
+            }
         };
 
         document.getElementById('refreshBtn').onclick = loadData;
