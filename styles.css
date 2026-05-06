@@ -1,0 +1,1747 @@
+:root {
+    --primary-color: #337ab7;
+    --primary-hover: #2a6ba0;
+    --secondary-color: #f5f5f5;
+    --border-color: #ccc;
+    --success-color: #eaf8db;
+    --warning-color: #fffed1;
+    --danger-color: #ffd1d1;
+    --text-color: #333;
+    --bg-color: #fff;
+    --border-radius: 4px;
+    --border-radius-lg: 8px;
+    --spacing-xs: 5px;
+    --spacing-sm: 10px;
+    --spacing-md: 15px;
+    --spacing-lg: 20px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+/* Header */
+.header {
+      background: linear-gradient(135deg, rgb(6, 95, 70) 0%, rgb(4, 120, 87) 100%);
+    color: white;
+    padding: var(--spacing-sm) var(--spacing-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+/* Group Actions */
+.group-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: rgba(255,255,255,0.1);
+    border-radius: var(--border-radius);
+}
+
+.group-actions button {
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: var(--border-radius);
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.group-actions button:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+/* Обновленные стили тулбара */
+.toolbar {
+    background-color: #f8f9fa;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    align-items: center;
+    min-height: 48px;
+}
+
+/* Группы инструментов */
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* Разделители */
+.toolbar-separator {
+    width: 1px;
+    height: 24px;
+    background-color: #dee2e6;
+    margin: 0 8px;
+}
+
+/* Кнопки тулбара */
+.toolbar-btn {
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: #495057;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.toolbar-btn:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    color: #212529;
+}
+
+.toolbar-btn:active {
+    background-color: #dee2e6;
+    transform: scale(0.95);
+}
+
+.toolbar-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Стилизованные селекты */
+.toolbar-select-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.toolbar-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding: 6px 28px 6px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: white;
+    color: #495057;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    min-width: 140px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23495057' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+}
+
+.toolbar-select:hover {
+    border-color: #adb5bd;
+}
+
+.toolbar-select:focus {
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+/* Обертки для цветовых инпутов */
+.color-input-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 36px;
+    height: 36px;
+}
+
+.toolbar-color {
+    width: 36px;
+    height: 36px;
+    padding: 2px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.15s ease;
+}
+
+.toolbar-color:hover {
+    border-color: #adb5bd;
+    transform: scale(1.05);
+}
+
+.toolbar-color::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.toolbar-color::-webkit-color-swatch {
+    border: none;
+    border-radius: 4px;
+}
+
+.color-label {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 10px;
+    font-weight: bold;
+    pointer-events: none;
+    color: currentColor;
+    text-shadow: 0 0 2px rgba(255,255,255,0.8);
+}
+
+.bg-label {
+    color: #666;
+}
+
+/* Всплывающие подсказки */
+.toolbar-btn::after {
+    content: attr(title);
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.toolbar-btn:hover::after {
+    opacity: 1;
+}
+
+/* Адаптация для темной темы */
+.dark-theme .toolbar {
+    background-color: #2d2d2d;
+    border-bottom-color: #404040;
+}
+
+.dark-theme .toolbar-separator {
+    background-color: #404040;
+}
+
+.dark-theme .toolbar-btn {
+    color: #e0e0e0;
+}
+
+.dark-theme .toolbar-btn:hover {
+    background-color: #3d3d3d;
+    border-color: #555;
+    color: #fff;
+}
+
+.dark-theme .toolbar-btn:active {
+    background-color: #4a4a4a;
+}
+
+.dark-theme .toolbar-select {
+    background-color: #3d3d3d;
+    color: #e0e0e0;
+    border-color: #555;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23e0e0e0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+}
+
+.dark-theme .toolbar-select:hover {
+    border-color: #666;
+}
+
+.dark-theme .toolbar-select:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+.dark-theme .toolbar-color {
+    border-color: #555;
+}
+
+.dark-theme .toolbar-color:hover {
+    border-color: #666;
+}
+
+/* Обновленные шрифты для селектов */
+#font-family option[value="'Inter', -apple-system, sans-serif"] {
+    font-family: 'Inter', -apple-system, sans-serif;
+}
+
+#font-family option[value="'Georgia', 'Times New Roman', serif"] {
+    font-family: Georgia, 'Times New Roman', serif;
+}
+
+#font-family option[value="'Roboto Mono', 'Courier New', monospace"] {
+    font-family: 'Roboto Mono', 'Courier New', monospace;
+}
+
+#font-family option[value="'Merriweather', Georgia, serif"] {
+    font-family: 'Merriweather', Georgia, serif;
+}
+
+/* Адаптивный дизайн */
+@media (max-width: 768px) {
+    .toolbar {
+        padding: 6px 8px;
+        gap: 4px;
+    }
+    
+    .toolbar-separator {
+        margin: 0 4px;
+    }
+    
+    .toolbar-btn {
+        width: 32px;
+        height: 32px;
+        padding: 4px;
+    }
+    
+    .toolbar-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .toolbar-select {
+        min-width: 120px;
+        font-size: 12px;
+    }
+    
+    .color-input-wrapper,
+    .toolbar-color {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+/* Main Container */
+.container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 280px;
+    background-color: var(--secondary-color);
+    border-right: 1px solid var(--border-color);
+    padding: var(--spacing-md);
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.sidebar h3 {
+    margin-bottom: var(--spacing-md);
+   
+}
+
+/* Template Categories */
+.template-category {
+    margin-bottom: var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+}
+
+.category-header {
+        background: linear-gradient(135deg, rgb(6, 95, 70) 0%, rgb(4, 120, 87) 100%);
+    color: white;
+    padding: var(--spacing-sm) var(--spacing-md);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s ease;
+    user-select: none;
+}
+
+.category-header:hover {
+       background: linear-gradient(135deg, rgb(5, 56, 42) 0%, rgb(3, 99, 72) 100%);
+}
+
+.category-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.category-toggle {
+    font-size: 12px;
+    transition: transform 0.2s ease;
+}
+
+.category-templates {
+    background: var(--bg-color);
+    padding: var(--spacing-sm);
+}
+
+/* Template Items */
+.template-item {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.template-item:hover {
+    background: #e2fff1;
+    color: rgb(0, 0, 0);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.template-preview {
+    margin-top: 4px;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.template-item:hover .template-preview {
+    opacity: 0.9;
+}
+
+/* Editor Area */
+.editor-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+}
+
+.editor {
+
+    flex: 1;
+    padding: 40px 20px;
+    overflow-y: auto;
+    background-color: var(--bg-color);
+}
+
+/* Blocks */
+.block {
+    cursor: default;
+    transform: none !important;
+    transition: transform 0.2s ease;
+}
+
+.block * {
+    cursor: inherit;
+}
+
+
+.block {
+    margin-bottom: var(--spacing-md);
+    border: 2px solid transparent;
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    position: relative;
+    min-height: 60px;
+    transition: all 0.3s ease;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.block:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.block.selected {
+    border-color: var(--primary-color);
+    background-color: rgba(51, 122, 183, 0.03);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* Drag Handle */
+.drag-handle {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    cursor: grab;
+    color: #999;
+    font-size: 14px;
+    z-index: 5;
+    padding: 4px 6px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.drag-handle:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    cursor: grab;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Block Actions */
+.block-actions {
+    position: absolute;
+    top: -12px;
+    right: 8px;
+    display: none;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 2px;
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.block:hover .block-actions {
+    display: flex;
+    gap: 1px;
+}
+
+.block-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 6px;
+    font-size: 12px;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    min-height: 24px;
+}
+
+.block-actions button:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Block Settings */
+.block-settings {
+    position: absolute;
+    top: -40px;
+    right: 100px;
+    display: none;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 4px;
+    z-index: 20;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.block:hover .block-settings {
+    display: flex;
+    gap: 4px;
+}
+
+.insert-macro-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    z-index: 25;
+    position: relative;
+}
+
+.insert-macro-btn:hover {
+    background: var(--primary-hover);
+}
+
+/* ===== ОСНОВНЫЕ СТИЛИ ДЛЯ ПАНЕЛИ НАСТРОЕК ===== */
+
+/* Главный контейнер панели настроек */
+.settings-panel {
+    position: fixed !important;
+    top: 20% !important;
+    left: 70% !important;
+   /*  transform: translate(-50%, -50%) !important;*/
+   background: var(--bg-color);
+   color: var(--text-color);
+   border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    z-index: 10000;
+    min-width: 320px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+   box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    display: none;
+    font-family: Arial, sans-serif;
+}
+
+/* Бэкдроп для затемнения фона */
+.settings-panel-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+    display: none;
+}
+
+.settings-panel.active + .settings-panel-backdrop {
+    display: block;
+}
+
+/* ===== ГРУППЫ НАСТРОЕК ===== */
+
+/* Контейнер группы настроек */
+.settings-group {
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.settings-group:last-child {
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
+/* Заголовок группы */
+.settings-group-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-md);
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--primary-color);
+    letter-spacing: 0.5px;
+}
+
+/* ===== СТРОКИ НАСТРОЕК ===== */
+
+/* Контейнер строки настройки */
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm);
+    padding: 8px 4px;
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s ease;
+}
+
+.settings-row:hover {
+    background: rgba(51, 122, 183, 0.05);
+}
+
+.settings-row:last-child {
+    margin-bottom: 0;
+}
+
+/* Метка настройки */
+.settings-label {
+    font-size: 14px;
+    flex: 1;
+    margin-right: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 500;
+}
+
+/* Контейнер для контролов */
+.settings-control {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* ===== ЭЛЕМЕНТЫ УПРАВЛЕНИЯ ===== */
+
+/* Текстовые поля */
+.settings-input {
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 13px;
+    min-width: 120px;
+    transition: all 0.2s ease;
+}
+
+.settings-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(51, 122, 183, 0.2);
+}
+
+/* Цветовые поля */
+.settings-color {
+    width: 40px;
+    height: 32px;
+    padding: 2px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.settings-color:hover {
+    border-color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.settings-color:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(51, 122, 183, 0.2);
+}
+
+/* Чекбоксы */
+.settings-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+.settings-checkbox:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 1px;
+}
+
+/* Выпадающие списки */
+.settings-select {
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 13px;
+    min-width: 140px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.settings-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(51, 122, 183, 0.2);
+}
+
+/* ===== КНОПКИ ДЕЙСТВИЙ ===== */
+
+/* Контейнер кнопок */
+.settings-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+}
+
+/* Базовые стили кнопок */
+.settings-btn {
+    padding: 12px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--secondary-color);
+    color: var(--text-color);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    user-select: none;
+    flex: 1;
+}
+
+.settings-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.settings-btn:active {
+    transform: translateY(0);
+}
+
+/* Специфичные стили кнопок */
+
+/* Кнопка применения */
+.settings-btn.apply-settings {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    font-weight: 600;
+}
+
+.settings-btn.apply-settings:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+/* Кнопка сброса */
+.settings-btn.reset-defaults {
+    background: #6c757d;
+    color: white;
+    border-color: #6c757d;
+}
+
+.settings-btn.reset-defaults:hover {
+    background: #5a6268;
+    border-color: #5a6268;
+}
+
+/* Кнопка закрытия */
+.settings-btn.close-settings {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.settings-btn.close-settings:hover {
+    background: #c82333;
+    border-color: #c82333;
+}
+
+/* ===== СПЕЦИАЛЬНЫЕ СТИЛИ ===== */
+
+/* Состояние отключенной настройки */
+.settings-row.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.settings-row.disabled .settings-label {
+    cursor: not-allowed;
+}
+
+/* Подсказки для настроек */
+.settings-hint {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Иконки в настройках */
+.settings-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    opacity: 0.7;
+}
+
+/* ===== АДАПТИВНОСТЬ ===== */
+
+@media (max-width: 768px) {
+    .settings-panel {
+        min-width: 90vw;
+        max-width: 95vw;
+        padding: var(--spacing-md);
+    }
+    
+    .settings-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .settings-label {
+        margin-right: 0;
+        margin-bottom: 4px;
+    }
+    
+    .settings-control {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .settings-actions {
+        flex-direction: column;
+    }
+}
+/* Инпуты в настройках */
+.settings-input, .settings-color {
+    background: var(--bg-color);
+    color: var(--text-color);
+}
+/* ===== ТЕМНАЯ ТЕМА ===== */
+
+.dark-theme .settings-panel {
+    background: #2d2d2d;
+    border-color: var(--primary-color);
+    color: #e0e0e0 !important;
+}
+
+.dark-theme .settings-group {
+    border-bottom-color: #444;
+}
+
+.dark-theme .settings-group-title {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.dark-theme .settings-input,
+.dark-theme .settings-select {
+    background: #3d3d3d;
+    color: var(--text-color);
+    border-color: #555;
+}
+
+.dark-theme .settings-input:focus,
+.dark-theme .settings-select:focus {
+    border-color: var(--primary-color);
+}
+
+.dark-theme .settings-row:hover {
+    background: rgba(51, 122, 183, 0.1);
+}
+
+.dark-theme .settings-btn {
+    background: #3d3d3d;
+    border-color: #555;
+}
+
+.dark-theme .settings-hint {
+    color: #aaa;
+}
+
+/* ===== АНИМАЦИИ ===== */
+
+@keyframes settingsPanelSlideIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -40%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+.settings-panel {
+    animation: settingsPanelSlideIn 0.3s ease;
+}
+
+/* ===== SCROLLBAR ДЛЯ ПАНЕЛИ ===== */
+
+.settings-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.settings-panel::-webkit-scrollbar-track {
+    background: var(--secondary-color);
+    border-radius: 4px;
+}
+
+.settings-panel::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+.settings-panel::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-hover);
+}
+
+/* Editable Content */
+
+.block.drop-above::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: red;
+    border-radius: 4px;
+    z-index: 10;
+}
+
+.block.drop-below::after {
+    content: "";
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: red;
+    border-radius: 4px;
+    z-index: 10;
+}
+.editable-content {
+    min-height: 40px;
+    outline: none;
+    padding: var(--spacing-sm);
+    color: var(--text-color);
+    border-radius: var(--border-radius);
+    transition: all 0.2s ease;
+}
+
+.editable-content[contenteditable="true"] {
+    background: rgba(51, 122, 183, 0.05) !important;
+    border: 2px solid var(--primary-color) !important;
+    padding: 12px !important;
+    min-height: 60px !important;
+    outline: none !important;
+    cursor: text !important;
+}
+/* Безопасные для редактирования области */
+.spoiler-content,
+.warning-text,
+.success-text, 
+.note-text,
+.numbered-content,
+.steps-list,
+.comparison-list,
+.quote-text,
+.code-content,
+.link-text-container,
+.image-caption,
+.procedure-steps,
+.checklist-description,
+.system-paths-container,
+.developer-note-container {
+    user-select: text !important;
+    cursor: text !important;
+}
+
+.spoiler-content *,
+.warning-text *,
+.success-text *,
+.note-text *,
+.numbered-content *,
+.steps-list *,
+.comparison-list *,
+.quote-text *,
+.code-content *,
+.link-text-container *,
+.image-caption *,
+.procedure-steps *,
+.checklist-description *,
+.system-paths-container *,
+.developer-note-container * {
+    user-select: text !important;
+    pointer-events: auto !important;
+    cursor: text !important;
+}
+
+.editable-content[contenteditable="true"]:focus {
+    background: rgba(51, 122, 183, 0.1) !important;
+    box-shadow: 0 0 0 3px rgba(83, 0, 14, 0.2) !important;
+}
+
+.editable-content.protected {
+    background-color: rgba(255, 193, 7, 0.1);
+    border: 1px dashed #ffc107;
+}
+
+/* Nested Editor */
+.nested-editor {
+    min-height: 80px;
+    border: 2px dashed var(--border-color);
+    padding: var(--spacing-md);
+    margin: var(--spacing-md) 0;
+    background: rgba(0,0,0,0.02);
+    border-radius: var(--border-radius);
+    transition: all 0.2s ease;
+}
+
+.nested-editor:hover {
+    border-color: var(--primary-color);
+    background: rgba(51, 122, 183, 0.03);
+}
+
+.nested-editor.empty::before {
+    content: "Перетащите сюда блоки или нажмите для редактирования...";
+    color: #999;
+    font-style: italic;
+}
+
+/* Drop Zone */
+.drop-zone {
+    border: 2px dashed var(--primary-color);
+    background-color: rgba(51, 122, 183, 0.1);
+    min-height: 80px;
+    margin: var(--spacing-md) 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+    border-radius: var(--border-radius);
+    transition: all 0.3s ease;
+}
+
+.drop-zone.active {
+    background-color: rgba(51, 122, 183, 0.2);
+    border-style: solid;
+}
+
+/* Drag States */
+.block.drag-ready {
+    border: 2px dashed var(--primary-color);
+    background-color: rgba(51, 122, 183, 0.05);
+}
+/* Визуальные индикаторы при перетаскивании */
+.block.dragging {
+    transform: rotate(5deg) !important;
+    transition: none !important;
+}
+
+.block.drag-over {
+    border: 2px dashed var(--primary-color) !important;
+    background-color: rgba(255, 0, 0, 0.199) !important;
+}
+
+/* Protected Elements */
+.protected-element {
+    position: relative;
+    user-select: none;
+     cursor: not-allowed;
+    padding: 8px;
+    margin: 4px 0;
+    border: 1px solid #ffc107;
+    background: rgba(255, 193, 7, 0.05);
+    border-radius: 4px;
+}
+
+.nested-content {
+    min-height: 40px;
+    border: 1px dashed transparent;
+    padding: 5px;
+    transition: all 0.2s ease;
+}
+
+.nested-content:hover {
+    border-color: #ccc;
+    background-color: rgba(0,0,0,0.02);
+}
+
+.nested-content.drag-over-nested {
+    border-color: #337ab7;
+    background-color: rgba(51, 122, 183, 0.1);
+}
+
+.nested-content:empty::before {
+    content: "Кликните чтобы добавить текст или перетащите макрос сюда";
+    color: #999;
+    font-style: italic;
+}
+
+/* Стили для редактируемых заголовков и текста */
+[contenteditable="true"] {
+    outline: none;
+}
+
+.warning-title[contenteditable="true"],
+.success-title[contenteditable="true"], 
+.note-title[contenteditable="true"],
+.spoiler-header[contenteditable="true"] {
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.warning-title[contenteditable="true"]:focus,
+.success-title[contenteditable="true"]:focus,
+.note-title[contenteditable="true"]:focus,
+.spoiler-header[contenteditable="true"]:focus {
+    background-color: rgba(51, 122, 183, 0.1);
+}
+
+/* Индикатор защиты */
+.protection-overlay {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(255,193,7,0.9);
+    color: #000;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.protected-element * {
+    user-select: none !important;
+    pointer-events: none !important;
+}
+
+.protected-element::before {
+    content: "🔒";
+    position: absolute;
+    top: -8px;
+    left: 8px;
+    background: #ffc107;
+    color: #000;
+    font-size: 10px;
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+
+/* Modals */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--bg-color);
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-lg);
+    width: 80%;
+    max-width: 600px;
+    max-height: 80%;
+    overflow-y: auto;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--border-radius);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-modal:hover {
+    background: rgba(0,0,0,0.1);
+}
+
+.export-area {
+    width: 100%;
+    height: 300px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    padding: var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    resize: vertical;
+    line-height: 1.4;
+}
+#copy-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, rgb(6, 95, 70) 0%, rgb(4, 120, 87) 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#copy-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+#copy-btn:active {
+    transform: translateY(0);
+}
+
+#copy-btn.copied {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+.btn {
+    padding: 8px 15px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    margin-top: var(--spacing-sm);
+}
+
+.btn:hover {
+    background: var(--primary-hover);
+}
+
+/* Notifications */
+.notification {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius);
+    color: white;
+    z-index: 1060;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    animation: slideInRight 0.3s ease;
+}
+
+.notification.success { background: #28a745; }
+.notification.error { background: #dc3545; }
+.notification.warning { background: #ffc107; color: #000; }
+.notification.info { background: #17a2b8; }
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Dark Theme */
+.dark-theme {
+    --primary-color: #4a90e2;
+    --primary-hover: #3a7bc8;
+    --secondary-color: #2d2d2d;
+    --border-color: #444;
+    --success-color: #2d4a2d;
+    --warning-color: #4a4a2d;
+    --danger-color: #4a2d2d;
+    --text-color: #e0e0e0;
+    --bg-color: #1e1e1e;
+}
+
+.dark-theme .toolbar {
+    background-color: var(--secondary-color);
+}
+
+.dark-theme .toolbar button {
+    background: #3d3d3d;
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+.dark-theme .sidebar {
+    background-color: var(--secondary-color);
+}
+
+.dark-theme .template-item {
+    background: #3d3d3d;
+    border-color: var(--border-color);
+}
+
+.dark-theme .template-item:hover {
+ background: #e2fff1;
+ color: rgb(0, 0, 0);
+}
+
+.dark-theme .modal-content {
+    background: #2d2d2d;
+    color: var(--text-color);
+}
+
+.dark-theme .export-area {
+    background: #3d3d3d;
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+.dark-theme .block-actions,
+.dark-theme .block-settings,
+.dark-theme .settings-panel {
+    background: #3d3d3d;
+    border-color: var(--border-color);
+}
+
+.dark-theme .drag-handle {
+    background: #3d3d3d;
+    border-color: var(--border-color);
+    color: #ccc;
+}
+
+.dark-theme .nested-editor {
+    background: rgba(255,255,255,0.05);
+    border-color: var(--border-color);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        height: 200px;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .settings-panel {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 400px;
+        max-height: 80%;
+    }
+}
+
+/* В styles.css добавьте эти стили */
+
+/* Панель действий - всегда показывать при наведении на блок или на саму панель */
+.block:hover .block-actions,
+.block-actions:hover {
+    display: flex !important;
+    gap: 1px;
+}
+
+/* Увеличиваем z-index для панелей чтобы они были поверх других элементов */
+.block-actions,
+.block-settings {
+    z-index: 990;
+}
+
+/* Убираем стандартное скрытие при наведении */
+.block .block-actions,
+.block .block-settings {
+    display: none;
+}
+
+/* Панель настроек - фиксированное позиционирование при открытии */
+.settings-panel.always-visible {
+    display: block !important;
+    position: fixed;
+    top: 25%;
+    left: 80%;
+    /* transform: translate(-50%, -50%); */
+    z-index: 1000;
+    max-height: 67vh;
+    overflow-y: auto;
+}
+
+/* Дополнительные стили для фиксации панелей */
+.block-settings.force-visible {
+    display: flex !important;
+}
+
+.block-actions.force-visible {
+    display: flex !important;
+}
+
+/* Улучшаем видимость кнопок */
+.insert-macro-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    z-index: 25;
+    position: relative;
+}
+
+.insert-macro-btn:hover {
+    background: var(--primary-hover);
+    transform: scale(1.05);
+}
+
+/* Убедимся, что панели не перекрываются */
+.block-actions {
+    position: absolute;
+    top: -15px;
+    right: 5px;
+    display: none;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 2px;
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.block-settings {
+    top: -40px;
+    right: 100px;
+}
+
+/* В styles.css добавьте: */
+
+/* Стили для групп настроек */
+.settings-group {
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.settings-group:last-child {
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
+.settings-group-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: var(--spacing-sm);
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm);
+    padding: 4px 0;
+}
+
+.settings-row:last-child {
+    margin-bottom: 0;
+}
+
+.settings-label {
+    font-size: 13px;
+    flex: 1;
+    margin-right: var(--spacing-sm);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-control {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.settings-input {
+    padding: 4px 6px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 13px;
+    min-width: 0;
+}
+
+.settings-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.settings-color {
+    width: 30px;
+    height: 30px;
+    padding: 2px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.settings-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.settings-select {
+    padding: 4px 6px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 13px;
+    min-width: 120px;
+}
+
+/* Кнопки в навигации */
+.theme-toggle{
+        color: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: rgba(6, 95, 70, 0.3) 0px 2px 8px;
+    background: rgb(0, 44, 32);
+    border-width: initial;
+    border-style: none;
+    border-color: initial;
+    border-image: initial;
+    padding: 8px 16px;
+    border-radius: 20px;
+    transition: 0.3s;
+}
+
+.export-btn {
+        color: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: rgba(6, 95, 70, 0.3) 0px 2px 8px;
+    background:  rgb(45, 175, 104);
+    border-width: initial;
+    border-style: none;
+    border-color: initial;
+    border-image: initial;
+    padding: 8px 16px;
+    border-radius: 20px;
+    transition: 0.3s;
+}
+
+.import-btn{
+        color: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: rgba(6, 95, 70, 0.3) 0px 2px 8px;
+    background:  rgb(175, 166, 45);
+    border-width: initial;
+    border-style: none;
+    border-color: initial;
+    border-image: initial;
+    padding: 8px 16px;
+    border-radius: 20px;
+    transition: 0.3s;
+}
+
+.clear-btn{
+        color: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: rgb(128, 0, 28)  0px 2px 8px;
+    background: linear-gradient(135deg, rgb(128, 0, 28) 0%, rgb(151, 0, 71) 100%);
+    border-width: initial;
+    border-style: none;
+    border-color: initial;
+    border-image: initial;
+    padding: 8px 16px;
+    border-radius: 20px;
+    transition: 0.3s;
+}
+
+/* Кнопки настроек */
+.settings-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid var(--border-color);
+}
+
+.settings-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--secondary-color);
+    color: var(--text-color);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+}
+
+.settings-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.settings-btn.apply {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.settings-btn.apply:hover {
+    background: var(--primary-hover);
+}
+
+/* Адаптация для темной темы */
+.dark-theme .settings-group {
+    border-bottom-color: var(--border-color);
+}
+
+.dark-theme .settings-group-title {
+    color: #ccc;
+    border-bottom-color: var(--border-color);
+}
+
+.dark-theme .settings-btn {
+    background: #3d3d3d;
+    border-color: var(--border-color);
+}
+.dark-theme .spoiler-content{
+     color: #000000;
+      background: #ffffff;
+}
+.dark-theme .toolbar select{
+         color: var(--text-color);
+          background: #3d3d3d;
+}
