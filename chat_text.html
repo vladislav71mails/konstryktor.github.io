@@ -88,6 +88,10 @@
             color: var(--text); cursor: pointer; font-size: 13px;
         }
         .nick-row button:hover { background: #21262d; }
+        .error-banner {
+            background: #f85149; color: white; padding: 8px 16px;
+            font-size: 13px; display: none; text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -96,6 +100,10 @@
             <span class="status online" id="statusDot"></span>
             Анонимный чат
             <span class="status-text" id="statusText">подключение...</span>
+        </div>
+
+        <div class="error-banner" id="errorBanner">
+            ⚠️ Ошибка подключения к серверу
         </div>
 
         <div class="nick-row">
@@ -117,7 +125,7 @@
 
     <script>
         // ============ ВСТАВЬТЕ СВОЙ URL СЮДА ============
-        const API_URL = 'https://script.google.com/macros/s/AKfycbyJcgwgglfJOYMQYjvDA1MmkRWR8-YmjxK7cco-9ribsutyD6B3TQoW6vX-3mI_S7t1cg/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbweRfPzC8IkpNF_EEX5sOMTqBtedOzUEw8J1Ues_JiaYUAaM4B0Dwz_WUaNno7epgwcsw/exec';
         // ==============================================
 
         const messagesDiv = document.getElementById('messages');
@@ -127,8 +135,8 @@
         const nickBtn = document.getElementById('nickBtn');
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
+        const errorBanner = document.getElementById('errorBanner');
 
-        // Загружаем ник из localStorage
         let nickname = localStorage.getItem('chat_nick') || '';
         if (!nickname) {
             nickname = 'Гость_' + Math.random().toString(36).substring(2, 7);
@@ -136,8 +144,9 @@
         }
         nickInput.value = nickname;
 
-        let lastMessageId = null;
         let isOnline = false;
+        let errorCount = 0;
+        const MAX_ERRORS = 3;
 
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -146,12 +155,15 @@
         }
 
         function formatTime(ts) {
-            const d = new Date(ts);
-            return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            try {
+                const d = new Date(ts);
+                if (isNaN(d.getTime())) return '';
+                return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            } catch { return ''; }
         }
 
         function renderMessages(messages) {
-            if (!messages || messages.length === 0) {
+            if (!messages || !Array.isArray(messages) || messages.length === 0) {
                 messagesDiv.innerHTML = '<div style="text-align:center;color:#484f58;margin-top:40px;font-size:13px;">Нет сообщений. Напиши первым!</div>';
                 return;
             }
@@ -159,35 +171,53 @@
             messagesDiv.innerHTML = messages.map(m => {
                 const isMe = m.nick === nickname;
                 return `
-                    <div class="msg ${isMe ? 'msg-out' : 'msg-in'}" data-id="${m.id}">
-                        <div class="author ${isMe ? 'me' : ''}">${escapeHtml(m.nick)}</div>
-                        <div>${escapeHtml(m.text)}</div>
+                    <div class="msg ${isMe ? 'msg-out' : 'msg-in'}">
+                        <div class="author ${isMe ? 'me' : ''}">${escapeHtml(m.nick || 'Аноним')}</div>
+                        <div>${escapeHtml(m.text || '')}</div>
                         <div class="time">${formatTime(m.timestamp)}</div>
                     </div>
                 `;
             }).join('');
 
-            // Автопрокрутка вниз, только если уже были внизу
             const wasAtBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop - messagesDiv.clientHeight < 100;
-            if (wasAtBottom || !lastMessageId) {
+            if (wasAtBottom) {
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }
-
-            // Запоминаем последний ID
-            if (messages.length > 0) {
-                lastMessageId = messages[messages.length - 1].id;
             }
         }
 
         async function loadMessages() {
             try {
-                const res = await fetch(API_URL);
-                const messages = await res.json();
-                renderMessages(messages);
+                const res = await fetch(API_URL, {
+                    method: 'GET',
+                    mode: 'cors',
+                    cache: 'no-cache'
+                });
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                
+                const data = await res.json();
+                
+                // Проверяем, не вернул ли сервер ошибку
+                if (data && data.error) {
+                    console.warn('Сервер вернул ошибку:', data.error);
+                    return;
+                }
+                
+                renderMessages(Array.isArray(data) ? data : []);
                 updateStatus(true);
+                errorCount = 0;
+                errorBanner.style.display = 'none';
+                
             } catch (err) {
-                console.error('Ошибка загрузки:', err);
-                updateStatus(false);
+                console.error('Ошибка загрузки:', err.message);
+                errorCount++;
+                
+                if (errorCount >= MAX_ERRORS) {
+                    updateStatus(false);
+                    errorBanner.style.display = 'block';
+                }
             }
         }
 
@@ -199,14 +229,31 @@
             msgInput.disabled = true;
 
             try {
-                await fetch(API_URL, {
+                const res = await fetch(API_URL, {
                     method: 'POST',
+                    mode: 'cors',
+                    cache: 'no-cache',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({ nick: nickname, text })
                 });
-                msgInput.value = '';
-                await loadMessages(); // Обновляем сразу
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                
+                const data = await res.json();
+                
+                if (data.error) {
+                    alert('Ошибка: ' + data.error);
+                } else {
+                    msgInput.value = '';
+                    await loadMessages();
+                }
             } catch (err) {
-                console.error('Ошибка отправки:', err);
+                console.error('Ошибка отправки:', err.message);
+                alert('Не удалось отправить сообщение. Проверьте подключение.');
                 updateStatus(false);
             }
 
@@ -220,35 +267,39 @@
             if (online) {
                 statusDot.className = 'status online';
                 statusText.textContent = 'онлайн';
+                errorBanner.style.display = 'none';
             } else {
                 statusDot.className = 'status offline';
                 statusText.textContent = 'офлайн';
             }
         }
 
-        // Отправка
         sendBtn.addEventListener('click', sendMessage);
         msgInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') sendMessage();
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
         });
 
-        // Смена ника
         nickBtn.addEventListener('click', () => {
             const newNick = nickInput.value.trim();
             if (newNick && newNick.length >= 2) {
                 nickname = newNick;
                 localStorage.setItem('chat_nick', nickname);
-                loadMessages(); // Перерисовать
+                loadMessages();
             }
         });
 
-        // Автообновление каждые 2 секунды
+        // Загружаем сразу и потом каждые 2 секунды
         loadMessages();
         setInterval(loadMessages, 2000);
 
-        // Обновление при возвращении на вкладку
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') loadMessages();
+            if (document.visibilityState === 'visible') {
+                errorCount = 0;
+                loadMessages();
+            }
         });
     </script>
 </body>
