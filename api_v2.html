@@ -390,7 +390,7 @@
 
         function updateStickerFilter() {
             const filter = el.stickerFilter;
-            filter.innerHTML = '<option value="">Все сотрудники</option>';
+            filter.innerHTML = '<option value="">Без стикеров</option>';
             
             for(const [leader, data] of Object.entries(allStickers)) {
                 const optgroup = document.createElement('optgroup');
