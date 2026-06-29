@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouGile - Поиск и создание задач</title>
+    <title>YouGile - Поиск, создание и приоритизация задач</title>
     <style>
         * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
         body { background: #eef2f7; margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 16px; }
@@ -32,7 +32,7 @@
         .btn:active { transform: translateY(0); }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e3ebf6; padding-bottom: 15px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e3ebf6; padding-bottom: 15px; flex-wrap: wrap; }
         .tab { padding: 10px 24px; border-radius: 20px; border: 1px solid #c1d3e8; background: white; cursor: pointer; font-size: 0.95rem; transition: all 0.2s; }
         .tab.active { background: #1e3f6e; color: white; border-color: #1e3f6e; }
 
@@ -73,13 +73,43 @@
         .no-results .icon { font-size: 3rem; margin-bottom: 15px; }
         
         .filter-label { font-size: 0.85rem; color: #6c757d; margin: 12px 0 8px; font-weight: 600; }
+
+        /* Стили для приоритизации */
+        .criteria-panel { background: #f8fafd; border-radius: 1.2rem; padding: 1.5rem 1.5rem 1rem; margin-bottom: 1.5rem; border: 1px solid #e9eef3; }
+        .criteria-grid { display: flex; flex-direction: column; gap: 0.8rem; }
+        .criterion-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; background: white; border-radius: 1rem; padding: 0.8rem 1.2rem; box-shadow: 0 2px 6px rgba(0,0,0,0.02); border: 1px solid #edf2f9; }
+        .criterion-info { display: flex; flex-direction: column; gap: 0.2rem; flex: 2; min-width: 220px; }
+        .criterion-name { font-weight: 600; color: #1e293b; font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem; }
+        .criterion-question { font-size: 0.8rem; color: #64748b; font-style: italic; }
+        .score-selector { display: flex; align-items: center; gap: 0.5rem; flex: 1; justify-content: flex-end; flex-wrap: wrap; }
+        .score-badge { background: #eef2ff; color: #2563eb; font-weight: 700; font-size: 0.9rem; padding: 0.3rem 0.8rem; border-radius: 2rem; min-width: 45px; text-align: center; }
+        
+        .priority-badge { font-weight: 700; padding: 0.4rem 1.5rem; border-radius: 3rem; font-size: 0.9rem; background: #e2e8f0; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; }
+        .priority-critical { background: #fee2e2; color: #991b1b; }
+        .priority-high { background: #ffedd5; color: #9a3412; }
+        .priority-medium { background: #fef08a; color: #854d0e; }
+        .priority-low { background: #dcfce7; color: #166534; }
+        
+        .priority-task-item { background: white; border: 2px solid #e3ebf6; border-radius: 14px; padding: 14px 18px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .priority-task-item:hover { border-color: #2563eb; }
+        .priority-task-info { display: flex; flex-direction: column; gap: 4px; }
+        .priority-task-title { font-weight: 600; color: #0f172a; }
+        .priority-task-meta { font-size: 0.8rem; color: #64748b; }
+        
+        .add-to-priority-btn { background: #e0e7ff; border: 1px solid #2563eb; color: #1e3f6e; padding: 4px 12px; border-radius: 15px; cursor: pointer; font-size: 0.8rem; font-weight: 600; }
+        .add-to-priority-btn:hover { background: #2563eb; color: white; }
+        
+        .subtitle-ba { color: #5b6e8c; font-weight: 400; font-size: 0.95rem; margin-bottom: 1.5rem; border-left: 4px solid #2563eb; padding-left: 1rem; background: #f0f4ff; border-radius: 0 8px 8px 0; line-height: 1.4; }
+        
+        .result-summary { background: #f0f6ff; border-radius: 1rem; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin: 1rem 0 1.5rem; border: 1px solid #d9e6ff; }
+        .total-score { font-weight: 700; font-size: 1.8rem; color: #0b1e33; line-height: 1; }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1>YouGile - Поиск и создание задач</h1>
-        <p>Поиск по всем доскам, колонкам, описаниям и чатам</p>
+        <h1>YouGile - Поиск, создание и приоритизация задач</h1>
+        <p>Поиск по всем доскам, колонкам, описаниям и чатам | Инструмент приоритизации</p>
     </div>
     <div class="content">
         
@@ -98,16 +128,18 @@
             <div class="tabs">
                 <button class="tab active" onclick="switchTab('employee')">Поиск сотрудника</button>
                 <button class="tab" onclick="switchTab('task')">Поиск задач</button>
+                <button class="tab" onclick="switchTab('priority')">Приоритизация задач по критериям</button>
             </div>
-                    <!-- Поиск сотрудника -->
+            
+            <!-- Поиск сотрудника -->
             <div id="employeeSearch">
                 <div class="search-row">
                     <input type="text" id="searchInput" placeholder="Фамилия сотрудника...">
-                  
                     <button class="btn btn-primary" id="searchBtn">Найти</button>
                     <button class="btn btn-secondary" id="refreshBtn">Обновить</button>
                 </div>
             </div>
+            
             <!-- Поиск по задачам -->
             <div id="taskSearch" style="display: none;">
                 <div class="search-row">
@@ -148,6 +180,44 @@
                 
                 <div id="taskSearchStats" class="stats" style="display: none;"></div>
                 <div id="taskSearchResults" class="task-search-results"></div>
+            </div>
+
+            <!-- Приоритизация BA -->
+            <div id="prioritySection" style="display: none;">
+                <div class="subtitle-ba">
+                 Все задачи ранжируются по критериям снижения обращаемости и повышения качества поддержки
+                </div>
+                
+                <div class="criteria-panel">
+                    <div class="criteria-grid" id="criteriaContainer"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.7rem;">
+                        <button class="btn btn-secondary" id="resetScoresBtn" style="padding: 6px 18px; font-size: 0.85rem;">↺ Сбросить оценки</button>
+                    </div>
+                </div>
+
+                <div class="result-summary" id="liveSummary">
+                    <div>
+                        <div style="font-size:0.8rem; color:#475569;">Текущая сумма баллов</div>
+                        <div class="total-score" id="totalScoreDisplay">0</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <div style="font-weight:500; color:#1e293b;">Приоритет:</div>
+                        <div class="priority-badge" id="priorityLabel">—</div>
+                    </div>
+                </div>
+
+                <div class="search-row" style="margin-bottom: 15px;">
+                    <input type="text" id="priorityTaskName" placeholder="Название задачи для оценки..." style="flex:3;">
+                    <button class="btn btn-primary" id="addPriorityTaskBtn">➕ Оценить и добавить</button>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <h4 style="color: #1e3f6e; margin-bottom: 10px;">Оценённые задачи (сортировка по приоритету)</h4>
+                    <div id="priorityTaskList" style="max-height: 400px; overflow-y: auto;">
+                        <div style="color:#94a3b8; padding:1rem; text-align:center;">Нет добавленных задач</div>
+                    </div>
+                    <button class="btn btn-secondary" id="clearPriorityTasksBtn" style="margin-top: 10px; font-size: 0.85rem;">Очистить список</button>
+                </div>
             </div>
         </div>
 
@@ -259,25 +329,220 @@
         let allStickers = {};
         let stickersLoaded = false;
 
+        // ============ ПРИОРИТИЗАЦИЯ BA ============
+        const criteriaData = [
+            { id: 1, name: "Влияние на частоту обращаемости", question: "Снизит ли задача количество входящих обращений на Х%?", maxScore: 5 },
+            { id: 2, name: "Эффективность инженеров", question: "Ускорит/упростит ли работу 1-й или 2-й линии?", maxScore: 4 },
+            { id: 3, name: "Масштаб влияния", question: "Касается всех клиентов/инженеров или единичных случаев?", maxScore: 3 },
+            { id: 4, name: "Срочность / Блокировка", question: "Если не сделать сейчас, что сломается или замедлится?", maxScore: 3 },
+            { id: 5, name: "Затраты ресурсов", question: "Сколько человеко-часов потребует задача от менеджмента?", maxScore: 2 },
+            { id: 6, name: "Стратегическая ценность", question: "Долгосрочное снижение обращаемости (не разовый)?", maxScore: 4 }
+        ];
+
+        let currentScores = {
+            1: 3,
+            2: 4,
+            3: 3,
+            4: 2,
+            5: 2,
+            6: 4
+        };
+
+        let priorityTasks = [];
+
+        function calculateTotal() {
+            return Object.values(currentScores).reduce((sum, val) => sum + (val || 0), 0);
+        }
+
+        function getPriorityLevel(total) {
+            if (total >= 19) return { text: 'КРИТИЧНО', class: 'priority-critical' };
+            if (total >= 15) return { text: 'ВЫСОКИЙ', class: 'priority-high' };
+            if (total >= 10) return { text: 'СРЕДНИЙ', class: 'priority-medium' };
+            return { text: 'НИЗКИЙ', class: 'priority-low' };
+        }
+
+        function updatePrioritySummary() {
+            const total = calculateTotal();
+            const totalDisplay = document.getElementById('totalScoreDisplay');
+            const priorityLabel = document.getElementById('priorityLabel');
+            if (totalDisplay) totalDisplay.textContent = total;
+            if (priorityLabel) {
+                const priority = getPriorityLevel(total);
+                priorityLabel.textContent = priority.text;
+                priorityLabel.className = `priority-badge ${priority.class}`;
+            }
+        }
+
+        function renderCriteria() {
+            const container = document.getElementById('criteriaContainer');
+            if (!container) return;
+            
+            container.innerHTML = criteriaData.map(c => {
+                const currentVal = currentScores[c.id] || 1;
+                let options = '';
+                for (let i = 1; i <= c.maxScore; i++) {
+                    options += `<option value="${i}" ${i === currentVal ? 'selected' : ''}>${i}</option>`;
+                }
+                return `
+                    <div class="criterion-row">
+                        <div class="criterion-info">
+                            <span class="criterion-name">🔹 ${c.name} <span style="font-size:0.75rem; color:#94a3b8;">(макс ${c.maxScore})</span></span>
+                            <span class="criterion-question">${c.question}</span>
+                        </div>
+                        <div class="score-selector">
+                            <span class="score-badge" id="badge-${c.id}">${currentVal}</span>
+                            <select data-criterion-id="${c.id}" class="criterion-select" style="padding: 0.4rem 1.5rem 0.4rem 0.8rem; border-radius: 2rem; border: 1px solid #dce2ec; font-size: 0.9rem;">
+                                ${options}
+                            </select>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.querySelectorAll('.criterion-select').forEach(select => {
+                select.addEventListener('change', function(e) {
+                    const criterionId = parseInt(this.getAttribute('data-criterion-id'), 10);
+                    const newValue = parseInt(this.value, 10);
+                    if (!isNaN(criterionId) && !isNaN(newValue)) {
+                        currentScores[criterionId] = newValue;
+                        const badge = document.getElementById(`badge-${criterionId}`);
+                        if (badge) badge.textContent = newValue;
+                        updatePrioritySummary();
+                    }
+                });
+            });
+            
+            updatePrioritySummary();
+        }
+
+        function renderPriorityTaskList() {
+            const container = document.getElementById('priorityTaskList');
+            if (!container) return;
+            
+            if (priorityTasks.length === 0) {
+                container.innerHTML = '<div style="color:#94a3b8; padding:1rem; text-align:center;">Нет добавленных задач</div>';
+                return;
+            }
+
+            const sorted = [...priorityTasks].sort((a, b) => b.totalScore - a.totalScore);
+            container.innerHTML = sorted.map((task, index) => {
+                const priority = getPriorityLevel(task.totalScore);
+                return `
+                    <div class="priority-task-item">
+                        <div class="priority-task-info">
+                            <span class="priority-task-title">${escapeHtml(task.name)}</span>
+                            <span class="priority-task-meta">
+                                ${task.totalScore} баллов · 
+                                <span class="priority-badge ${priority.class}" style="padding:0.15rem 0.7rem; font-size:0.75rem;">${priority.text}</span>
+                                ${task.source === 'yougile' ? ' · <span style="color:#2563eb;">из поиска</span>' : ''}
+                            </span>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            ${task.taskUrl ? `<a href="${task.taskUrl}" target="_blank" style="color:#2563eb; font-size:0.8rem; text-decoration:none;">🔗 Открыть</a>` : ''}
+                            <button onclick="deletePriorityTask(${index})" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:1.2rem;" title="Удалить">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.deletePriorityTask = function(index) {
+            priorityTasks.splice(index, 1);
+            renderPriorityTaskList();
+        };
+
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function addPriorityTask(name, source = 'manual', taskUrl = null) {
+            if (!name || !name.trim()) {
+                alert('Введите название задачи');
+                return;
+            }
+            const total = calculateTotal();
+            priorityTasks.push({
+                id: Date.now(),
+                name: name.trim(),
+                scores: { ...currentScores },
+                totalScore: total,
+                priority: getPriorityLevel(total).text,
+                source: source,
+                taskUrl: taskUrl
+            });
+            renderPriorityTaskList();
+            
+            const nameInput = document.getElementById('priorityTaskName');
+            if (nameInput) nameInput.value = '';
+        }
+
+        function resetScoresToDefault() {
+            currentScores = {
+                1: 3,
+                2: 4,
+                3: 3,
+                4: 2,
+                5: 2,
+                6: 4
+            };
+            renderCriteria();
+        }
+
+        function loadExampleScores() {
+            currentScores = {
+                1: 3,
+                2: 4,
+                3: 3,
+                4: 2,
+                5: 2,
+                6: 4
+            };
+            renderCriteria();
+            const nameInput = document.getElementById('priorityTaskName');
+            if (nameInput) nameInput.value = "Инструкция по настройке VPN (пример)";
+        }
+
+        // ============ ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ============
         window.switchTab = function(tab) {
             currentTab = tab;
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
+            
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(t => {
+                if ((tab === 'employee' && t.textContent.includes('Поиск сотрудника')) ||
+                    (tab === 'task' && t.textContent.includes('Поиск задач')) ||
+                    (tab === 'priority' && t.textContent.includes('Приоритизация'))) {
+                    t.classList.add('active');
+                }
+            });
             
             document.getElementById('employeeSearch').style.display = tab === 'employee' ? 'block' : 'none';
             document.getElementById('taskSearch').style.display = tab === 'task' ? 'block' : 'none';
+            document.getElementById('prioritySection').style.display = tab === 'priority' ? 'block' : 'none';
             
             if (tab === 'employee') {
                 document.getElementById('matchResult').style.display = curMatch ? 'block' : 'none';
                 document.getElementById('taskForm').style.display = curMatch ? 'block' : 'none';
                 document.getElementById('taskSearchResults').innerHTML = '';
                 document.getElementById('taskSearchStats').style.display = 'none';
-            } else {
+            } else if (tab === 'task') {
                 document.getElementById('matchResult').style.display = 'none';
                 document.getElementById('taskForm').style.display = 'none';
+            } else if (tab === 'priority') {
+                document.getElementById('matchResult').style.display = 'none';
+                document.getElementById('taskForm').style.display = 'none';
+                document.getElementById('taskSearchResults').innerHTML = '';
+                document.getElementById('taskSearchStats').style.display = 'none';
+                renderCriteria();
+                renderPriorityTaskList();
             }
         };
 
+        // ============ СУЩЕСТВУЮЩИЙ ФУНКЦИОНАЛ ============
         window.exec = (cmd, val = null) => { 
             document.execCommand(cmd, false, val); 
             el.editor.focus(); 
@@ -484,7 +749,6 @@
                             totalTasks += tasks.length;
                             
                             for(const task of tasks) {
-                                // Фильтр по стикеру
                                 if (filterData && !checkStickerFilter(task, filterData)) {
                                     continue;
                                 }
@@ -542,9 +806,7 @@
                                                 }
                                             }
                                         }
-                                    } catch(e) {
-                                        // Игнорируем ошибки чата
-                                    }
+                                    } catch(e) {}
                                 }
                                 
                                 if (found) {
@@ -569,9 +831,7 @@
                                     });
                                 }
                             }
-                        } catch(e) {
-                            // Пропускаем ошибки отдельных колонок
-                        }
+                        } catch(e) {}
                     }
                 } catch(e) {
                     addLog(`Ошибка при поиске в доске "${board.leader}": ${e.message}`, true);
@@ -604,8 +864,11 @@
                                     result.boardType === 'teamlead' ? 'Тимлид' : 'Общая';
                     
                     html += `
-                        <div class="task-item" onclick="window.open('${result.taskUrl}', '_blank')" title="Открыть задачу">
-                            <h3>${highlightMatch(result.title, query)} ${result.completed ? '(Завершено)' : ''}</h3>
+                        <div class="task-item">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <h3 style="cursor:pointer; flex:1;" onclick="window.open('${result.taskUrl}', '_blank')">${highlightMatch(result.title, query)} ${result.completed ? '(Завершено)' : ''}</h3>
+                                <button class="add-to-priority-btn" onclick="event.stopPropagation(); addToPriorityFromSearch('${escapeHtml(result.title).replace(/'/g, "\\'")}', '${result.taskUrl}')" title="Добавить в приоритизацию">📋 В приоритет</button>
+                            </div>
                             <div class="task-meta">
                                 <span>${typeLabel}: ${result.board}</span>
                                 <span>Колонка: ${result.column}</span>
@@ -628,6 +891,12 @@
             addLog(`Поиск завершен. Проверено: ${totalTasks} задач в ${boardsToSearch.length} досках. Найдено: ${allResults.length}`);
         };
         
+        window.addToPriorityFromSearch = function(taskTitle, taskUrl) {
+            addPriorityTask(taskTitle, 'yougile', taskUrl);
+            switchTab('priority');
+            addLog(`Задача "${taskTitle}" добавлена в приоритизацию`);
+        };
+        
         function highlightMatch(text, query) {
             if (!query || !text) return text;
             const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -636,42 +905,41 @@
         }
 
         // Поиск сотрудника
-    document.getElementById('searchBtn').onclick = async () => {
-    if(!BOARDS.techleads[0].states || !BOARDS.techleads[0].states.length) await loadData();
-    const q = el.search.value.toLowerCase().trim();
-    if(!q) return;
-    
-    // Убираем обращение к несуществующему teamFilter
-    let teamsToSearch = BOARDS.techleads;
+        document.getElementById('searchBtn').onclick = async () => {
+            if(!BOARDS.techleads[0].states || !BOARDS.techleads[0].states.length) await loadData();
+            const q = el.search.value.toLowerCase().trim();
+            if(!q) return;
+            
+            let teamsToSearch = BOARDS.techleads;
 
-    for(const t of teamsToSearch) {
-        if(!t.states) continue;
-        const s = t.states.find(i => i.name.toLowerCase().includes(q));
-        if(s) {
-            curMatch = { 
-                sName: s.name, 
-                sId: s.id, 
-                colId: t.columnId, 
-                stickId: t.stickerStateId, 
-                bId: t.boardId, 
-                leader: t.leader, 
-                projectPath: t.projectPath, 
-                leaderUrlName: t.leaderUrlName 
-            };
-            document.getElementById('matchResult').style.display = 'block';
-            document.getElementById('taskForm').style.display = 'block';
-            el.title.value = `Взаимодействие: ${s.name}`;
-            document.getElementById('matchText').innerHTML = `Найден: <b>${s.name}</b> (команда ${t.leader}) - запрос "${q}"`;
-            document.getElementById('columnPreview').innerHTML = `
-                <span>Колонка: <code>${t.columnId}</code></span> 
-                <span>Тех.лид: ${t.leader}</span> 
-                <span>Стикер: <code>${t.stickerStateId}</code> -> <code>${s.id}</code></span>
-            `;
-            return;
-        }
-    }
-    addLog(`Сотрудник "${q}" не найден`, true);
-};
+            for(const t of teamsToSearch) {
+                if(!t.states) continue;
+                const s = t.states.find(i => i.name.toLowerCase().includes(q));
+                if(s) {
+                    curMatch = { 
+                        sName: s.name, 
+                        sId: s.id, 
+                        colId: t.columnId, 
+                        stickId: t.stickerStateId, 
+                        bId: t.boardId, 
+                        leader: t.leader, 
+                        projectPath: t.projectPath, 
+                        leaderUrlName: t.leaderUrlName 
+                    };
+                    document.getElementById('matchResult').style.display = 'block';
+                    document.getElementById('taskForm').style.display = 'block';
+                    el.title.value = `Взаимодействие: ${s.name}`;
+                    document.getElementById('matchText').innerHTML = `Найден: <b>${s.name}</b> (команда ${t.leader}) - запрос "${q}"`;
+                    document.getElementById('columnPreview').innerHTML = `
+                        <span>Колонка: <code>${t.columnId}</code></span> 
+                        <span>Тех.лид: ${t.leader}</span> 
+                        <span>Стикер: <code>${t.stickerStateId}</code> -> <code>${s.id}</code></span>
+                    `;
+                    return;
+                }
+            }
+            addLog(`Сотрудник "${q}" не найден`, true);
+        };
 
         // Создание задачи
         document.getElementById('createBtn').onclick = async () => {
@@ -748,6 +1016,38 @@
             }
         };
 
+        // ============ ИНИЦИАЛИЗАЦИЯ ПРИОРИТИЗАЦИИ ============
+        document.getElementById('addPriorityTaskBtn').onclick = () => {
+            const nameInput = document.getElementById('priorityTaskName');
+            if (nameInput) {
+                addPriorityTask(nameInput.value);
+            }
+        };
+
+        document.getElementById('priorityTaskName').onkeypress = (e) => {
+            if (e.key === 'Enter') {
+                const nameInput = document.getElementById('priorityTaskName');
+                if (nameInput) addPriorityTask(nameInput.value);
+            }
+        };
+
+        document.getElementById('resetScoresBtn').onclick = () => {
+            if (confirm('Сбросить все оценки к значениям по умолчанию?')) {
+                resetScoresToDefault();
+            }
+        };
+
+        document.getElementById('loadExampleScores').onclick = loadExampleScores;
+
+        document.getElementById('clearPriorityTasksBtn').onclick = () => {
+            if (priorityTasks.length === 0) return;
+            if (confirm('Удалить все оценённые задачи?')) {
+                priorityTasks = [];
+                renderPriorityTaskList();
+            }
+        };
+
+        // ============ ОСТАЛЬНЫЕ ОБРАБОТЧИКИ ============
         document.getElementById('refreshBtn').onclick = loadData;
         
         el.search.onkeypress = (e) => { if(e.key==='Enter') document.getElementById('searchBtn').click(); };
@@ -759,6 +1059,10 @@
                 loadStickers();
             }
         };
+
+        // Инициализация при загрузке
+        renderCriteria();
+        renderPriorityTaskList();
     })();
 </script>
 </body>
