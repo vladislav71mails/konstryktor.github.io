@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouGile - Динамический мост задач v2</title>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body { background: #eef2f7; margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 16px; }
+        .container { max-width: 1300px; width: 100%; background: white; border-radius: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; margin-top: 20px; }
+        .header { background: linear-gradient(135deg, #0b1f33, #1e3f6e); color: white; padding: 24px 30px; }
+        .header h1 { margin: 0; font-weight: 500; font-size: 1.8rem; }
+        .header p { margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem; }
+        .content { padding: 30px; }
+
+        .api-box { background: #fff4f4; border-radius: 20px; padding: 18px 24px; margin-bottom: 20px; border: 1px solid #f2cfcf; }
+        .api-box h3 { margin: 0 0 15px 0; color: #1e3f6e; }
+        .api-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+        .api-row label { min-width: 180px; font-weight: 600; color: #1e3f6e; font-size: 0.9rem; }
+        .api-row input { flex: 1; padding: 10px 15px; border: 1px solid #e5b3b3; border-radius: 40px; outline: none; font-size: 0.9rem; min-width: 250px; }
+
+        .config-section { background: #f0f6ff; border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #d9e6ff; }
+        .config-section h3 { margin: 0 0 15px 0; color: #1e3f6e; }
+        .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 768px) { .config-grid { grid-template-columns: 1fr; } }
+        .config-field label { display: block; font-size: 0.85rem; font-weight: 600; color: #1e3f6e; margin-bottom: 5px; }
+        .config-field input, .config-field select { width: 100%; padding: 10px 15px; border: 1px solid #c5d6ef; border-radius: 20px; outline: none; font-size: 0.9rem; }
+        .config-field .hint { font-size: 0.75rem; color: #6c757d; margin-top: 4px; }
+
+        .btn { background: white; border: 1.5px solid #b9cee8; padding: 10px 24px; border-radius: 40px; font-weight: 600; color: #1e3a6b; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: #1e3f6e; border-color: #1e3f6e; color: white; }
+        .btn-success { background: #059669; border-color: #059669; color: white; }
+        .btn-warning { background: #d97706; border-color: #d97706; color: white; }
+        .btn-info { background: #0891b2; border-color: #0891b2; color: white; }
+        .btn-danger { background: #dc2626; border-color: #dc2626; color: white; }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0.9; }
+
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e3ebf6; padding-bottom: 15px; flex-wrap: wrap; }
+        .tab { padding: 10px 24px; border-radius: 20px; border: 1px solid #c1d3e8; background: white; cursor: pointer; font-size: 0.95rem; transition: all 0.2s; }
+        .tab.active { background: #1e3f6e; color: white; border-color: #1e3f6e; }
+
+        .task-item { background: white; border: 2px solid #e3ebf6; border-radius: 16px; padding: 18px 22px; margin-bottom: 12px; }
+        .task-item:hover { border-color: #2563eb; }
+        .task-item.linked { border-left: 4px solid #059669; background: #f0fdf4; }
+        .task-item.not-found { border-left: 4px solid #dc2626; background: #fef2f2; }
+        .task-item h3 { margin: 0 0 8px 0; color: #1e3f6e; font-size: 1.05rem; }
+        .task-item .task-meta { font-size: 0.85rem; color: #6c757d; display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 8px; }
+
+        .sticker-info { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin: 10px 0; font-size: 0.85rem; }
+        .sticker-info code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
+        .sticker-state { display: inline-block; padding: 2px 8px; border-radius: 4px; margin: 2px; font-size: 0.8rem; color: white; }
+
+        .log-area { background: #1a1a2e; color: #e2e8f0; border-radius: 22px; padding: 20px; font-size: 0.85rem; line-height: 1.6; max-height: 300px; overflow-y: auto; margin-top: 20px; font-family: 'Courier New', monospace; }
+        .log-success { color: #4ade80; }
+        .log-error { color: #f87171; }
+        .log-info { color: #93c5fd; }
+        .log-warning { color: #fbbf24; }
+
+        .loading-indicator { text-align: center; padding: 30px; color: #6c757d; }
+        .no-results { text-align: center; padding: 40px; color: #6c757d; }
+        .sync-status { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+        .sync-status.linked { background: #d1fae5; color: #065f46; }
+        .sync-status.not-linked { background: #fee2e2; color: #991b1b; }
+
+        .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 12px 16px; margin: 10px 0; font-size: 0.9rem; color: #1e40af; }
+        .highlight-id { background: #fef3c7; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: 600; font-size: 0.85rem; }
+        
+        .pinned-indicator { display: inline-block; background: #fbbf24; color: #1a1a2e; padding: 2px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; margin-left: 8px; }
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: white; border-radius: 24px; padding: 30px; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal h2 { margin-top: 0; color: #1e3f6e; }
+        .modal .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+        
+        .pinned-message-preview {
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.8;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .pinned-message-preview strong { font-weight: 700; }
+        .pinned-message-preview u { text-decoration: underline; }
+        .pinned-message-preview ul { margin: 8px 0; padding-left: 20px; }
+        .pinned-message-preview li { margin: 4px 0; }
+        .pinned-message-preview hr { border: none; border-top: 1px solid #e2e8f0; margin: 16px 0; }
+        .pinned-message-preview .msg-author { margin: 12px 0 4px 0; }
+        .pinned-message-preview .msg-author.bot { color: #64748b; font-weight: 500; }
+        .pinned-message-preview .msg-author.user { font-weight: 600; }
+        .pinned-message-preview .msg-text { margin-left: 8px; padding-left: 12px; border-left: 3px solid #e2e8f0; }
+        .pinned-message-preview .msg-text.bot { color: #64748b; }
+        .api-row_Metodist {display: none;}
+         .tab-link { padding: 10px 24px; border-radius: 20px; border: 1px solid #c1d3e8; background: #6e1e1e; color: white; text-decoration: none; font-size: 0.95rem; transition: all 0.2s; font-weight: 600; cursor: pointer; display: inline-block; }
+        .tab-link:hover { background: #611919; color: white; border-color: #3f1010; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>YouGile - "Мост" между разными компаниями</h1>
+        <p>Постановка задачи • Поиск связей через ID • Синхронизация статуса и чата</p>
+    </div>
+    <div class="content">
+        
+        <div class="api-box">
+            <h3>API Ключ</h3>
+            <div class="api-row">
+                <label>Ключи от компании scloud (Менеджмент):</label>
+                <input type="password" id="apiTokenManagement" placeholder="Ключ текущей компании" autocomplete="off" value="s3EFIq9dJnDSaFe1ipxGHhGwLPSFTsRVtVRHRLV4AVMnXIibZV302jLiUJ2uCAs3">
+            </div>
+            <div class="api-row_Metodist">
+                <label>Metodist (предустановлен):</label>
+                <input type="password" id="apiTokenMetodist" autocomplete="off" value="ON_g8OGT4cOYmDDRjYkCyA1ZhS18LpLoeQ8G6_2JoGAsu8SsX5TnOXwJfhR7uMmu">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="initializeApp()">Авторизация</button>
+                 <a class="tab-link" href="api_v2.html" target="_blank">Выход</a>
+            </div>
+        </div>
+<div class="block content-spoiler">
+  <div class="editable-content">
+    <details class="spoiler-container" style="margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px;">
+      <summary class="spoiler-header" style="background: rgb(245, 245, 245); padding: 12px 15px; font-weight: bold;">
+        <strong>Настройки конфигурации</strong>
+      </summary>
+      <div class="spoiler-content" style="padding: 15px;">
+         <div class="config-section">
+<h3>Колонки и стикеры</h3>
+            <div class="config-grid">
+                <div class="config-field">
+                    <label>Колонка "Делигированы" (Менеджмент)</label>
+                    <input type="text" id="delegatedColumnId" placeholder="Нажмите Найти">
+                </div>
+                <div class="config-field">
+                    <label>Колонка "Бэклог" (Metodist)</label>
+                    <input type="text" id="metodistBacklogId" placeholder="Нажмите Найти Бэклог">
+                </div>
+                <div class="config-field">
+                    <label>ID стикера "Состояние задачи"</label>
+                    <input type="text" id="stateStickerId" value="4d098c5c-1212-42f1-9050-0fd9d080655a">
+                    <div class="hint">Сам стикер (не состояние)</div>
+                </div>
+                <div class="config-field">
+                    <label>Состояние "Ожидание"</label>
+                    <input type="text" id="stateWaiting" value="843ab35bf70d" placeholder="ID состояния">
+                </div>
+                <div class="config-field">
+                    <label>Состояние "В работе"</label>
+                    <input type="text" id="stateInProgress" value="4f24b3584404" placeholder="ID состояния">
+                </div>
+                <div class="config-field">
+                    <label>Состояние "В бэклоге"</label>
+                    <input type="text" id="stateBacklog" value="7b713ed0dd9f" placeholder="ID состояния">
+                </div>
+                <div class="config-field">
+                    <label>Состояние "Выполнено"</label>
+                    <input type="text" id="stateCompleted" value="889f77407117" placeholder="ID состояния">
+                </div>
+                <div class="config-field">
+                    <label>Лимит сообщений чата</label>
+                    <input type="number" id="chatSyncLimit" value="50" min="1" max="100">
+                </div>
+                <div class="config-field">
+                    <label>📌 Закрепленное сообщение</label>
+                    <input type="text" id="pinnedMessageId" placeholder="ID закрепленного сообщения (авто)" readonly style="background:#f0f6ff;">
+                    <div class="hint">ID сообщения, которое используется как закреп</div>
+                </div>
+                
+            </div>
+                           
+            <div id="stickerStatesInfo" class="sticker-info" style="display:none;"></div> <button class="btn btn-primary" onclick="saveConfig()">Сохранить</button>
+                    
+                </div>
+    </details>
+  </div>
+
+            </div>
+            <div id="stickerStatesInfo" class="sticker-info" style="display:none;"></div>
+        </div>
+  <div class="spoiler-content" style="padding: 15px;">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('delegate')">Делегирование</button>
+            <button class="tab" onclick="switchTab('sync')">🔁 Статусы</button>
+            <button class="tab" onclick="switchTab('chat')">💬 Чаты</button>
+        </div>
+
+        <div id="delegateSection">
+            <button class="btn btn-primary" onclick="loadTasksWithLinks()" style="margin-bottom:15px;">Загрузить задачи и найти связи</button>
+            <button class="btn btn-success" onclick="delegateAllNew()" style="margin-bottom:15px;">Делегировать все новые</button>
+            <div id="delegatedTasksContainer"></div>
+        </div>
+
+        <div id="syncSection" style="display: none;">
+            <button class="btn btn-primary" onclick="loadTasksWithLinks()" style="margin-bottom:15px;">Загрузить и найти связи</button>
+            <button class="btn btn-warning" onclick="syncAllStatuses()" style="margin-bottom:15px;">Синхронизировать все статусы</button>
+            <div id="syncTasksContainer"></div>
+        </div>
+
+        <div id="chatSection" style="display: none;">
+            <button class="btn btn-primary" onclick="loadTasksWithLinks()" style="margin-bottom:15px;">Загрузить и найти связи</button>
+            <button class="btn btn-info" onclick="syncAllChats()" style="margin-bottom:15px;">💬 Синхронизировать все чаты (закреп)</button>
+            <button class="btn btn-danger" onclick="clearPinnedMessage()" style="margin-bottom:15px;">Очистить закреп</button>
+            <div id="chatTasksContainer"></div>
+        </div>
+
+        <div class="log-area" id="log">[СИСТЕМА] Готов. Нажмите "Авторизация" для настройки.</div>
+    </div>
+</div>
+
+<!-- Модальное окно для просмотра закрепленного сообщения -->
+<div class="modal-overlay" id="pinnedModal">
+    <div class="modal">
+        <h2>📌 Закрепленное сообщение</h2>
+        <div id="pinnedModalContent" class="pinned-message-preview"></div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closePinnedModal()">Закрыть</button>
+            <button class="btn btn-primary" onclick="copyPinnedContent()">📋 Копировать</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const METODIST_API_KEY = "ON_g8OGT4cOYmDDRjYkCyA1ZhS18LpLoeQ8G6_2JoGAsu8SsX5TnOXwJfhR7uMmu";
+        const METODIST_COMPANY = "4797d3e814d4";
+        const BOT_USER_ID = "0000bdc7-0363-4d30-b5d3-5e0fc72f811f";
+        
+        const STORAGE_CONFIG = 'yg_bridge_cfg_v12';
+        const STORAGE_CHAT_CACHE = 'yg_chat_sync_cache_v12';
+        const STORAGE_PINNED = 'yg_pinned_messages_v12';
+        
+        let tokenManagement = '';
+        let tokenMetodist = METODIST_API_KEY;
+        let delegatedColumnId = '';
+        let metodistBacklogId = '';
+        let stateStickerId = '4d098c5c-1212-42f1-9050-0fd9d080655a';
+        let stateWaitingId = '843ab35bf70d';
+        let stateInProgressId = '4f24b3584404';
+        let stateBacklogId = '7b713ed0dd9f';
+        let stateCompletedId = '889f77407117';
+        let chatSyncLimit = 50;
+        let pinnedMessageId = '';
+        
+        let chatSyncCache = {};
+        let pinnedMessagesCache = {};
+        let currentTasks = [];
+        let userCache = {};
+
+        const el = {
+            tokenMgmt: document.getElementById('apiTokenManagement'),
+            tokenMetodist: document.getElementById('apiTokenMetodist'),
+            delegatedColId: document.getElementById('delegatedColumnId'),
+            metodistBacklog: document.getElementById('metodistBacklogId'),
+            stateSticker: document.getElementById('stateStickerId'),
+            stateWaiting: document.getElementById('stateWaiting'),
+            stateInProgress: document.getElementById('stateInProgress'),
+            stateBacklog: document.getElementById('stateBacklog'),
+            stateCompleted: document.getElementById('stateCompleted'),
+            chatSyncLimit: document.getElementById('chatSyncLimit'),
+            pinnedMessageId: document.getElementById('pinnedMessageId'),
+            log: document.getElementById('log'),
+            stickerStatesInfo: document.getElementById('stickerStatesInfo'),
+            delegatedTasksContainer: document.getElementById('delegatedTasksContainer'),
+            syncTasksContainer: document.getElementById('syncTasksContainer'),
+            chatTasksContainer: document.getElementById('chatTasksContainer')
+        };
+
+        function addLog(msg, type = 'info') {
+            const icons = { error: '❌', success: '✅', info: 'ℹ️', warning: '⚠️' };
+            const time = new Date().toLocaleTimeString();
+            el.log.innerHTML = `<div class="log-${type}">[${time}] ${icons[type]} ${escapeHtml(msg)}</div>` + el.log.innerHTML;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function readConfig() {
+            tokenManagement = el.tokenMgmt.value.trim();
+            tokenMetodist = el.tokenMetodist.value.trim() || METODIST_API_KEY;
+            delegatedColumnId = el.delegatedColId.value.trim();
+            metodistBacklogId = el.metodistBacklog.value.trim();
+            stateStickerId = el.stateSticker.value.trim();
+            stateWaitingId = el.stateWaiting.value.trim();
+            stateInProgressId = el.stateInProgress.value.trim();
+            stateBacklogId = el.stateBacklog.value.trim();
+            stateCompletedId = el.stateCompleted.value.trim();
+            chatSyncLimit = parseInt(el.chatSyncLimit.value) || 50;
+            pinnedMessageId = el.pinnedMessageId.value.trim();
+        }
+
+        window.saveConfig = function() {
+            readConfig();
+            localStorage.setItem(STORAGE_CONFIG, JSON.stringify({
+                tokenManagement, delegatedColumnId, metodistBacklogId,
+                stateStickerId, stateWaitingId, stateInProgressId, stateBacklogId, stateCompletedId,
+                chatSyncLimit, pinnedMessageId
+            }));
+            addLog('Конфигурация сохранена', 'success');
+        };
+
+        function loadConfig() {
+            el.tokenMetodist.value = METODIST_API_KEY;
+            const saved = localStorage.getItem(STORAGE_CONFIG);
+            if (saved) {
+                try {
+                    const c = JSON.parse(saved);
+                    el.tokenMgmt.value = c.tokenManagement || '';
+                    el.delegatedColId.value = c.delegatedColumnId || '';
+                    el.metodistBacklog.value = c.metodistBacklogId || '';
+                    el.stateSticker.value = c.stateStickerId || '4d098c5c-1212-42f1-9050-0fd9d080655a';
+                    el.stateWaiting.value = c.stateWaitingId || '843ab35bf70d';
+                    el.stateInProgress.value = c.stateInProgressId || '4f24b3584404';
+                    el.stateBacklog.value = c.stateBacklogId || '7b713ed0dd9f';
+                    el.stateCompleted.value = c.stateCompletedId || '889f77407117';
+                    el.chatSyncLimit.value = c.chatSyncLimit || 50;
+                    el.pinnedMessageId.value = c.pinnedMessageId || '';
+                } catch(e) {}
+            }
+            readConfig();
+            loadChatCache();
+            loadPinnedCache();
+        }
+
+        function saveChatCache() {
+            localStorage.setItem(STORAGE_CHAT_CACHE, JSON.stringify(chatSyncCache));
+        }
+
+        function loadChatCache() {
+            const saved = localStorage.getItem(STORAGE_CHAT_CACHE);
+            if (saved) {
+                try { chatSyncCache = JSON.parse(saved); } catch(e) { chatSyncCache = {}; }
+            }
+        }
+
+        function savePinnedCache() {
+            localStorage.setItem(STORAGE_PINNED, JSON.stringify(pinnedMessagesCache));
+        }
+
+        function loadPinnedCache() {
+            const saved = localStorage.getItem(STORAGE_PINNED);
+            if (saved) {
+                try { pinnedMessagesCache = JSON.parse(saved); } catch(e) { pinnedMessagesCache = {}; }
+            }
+        }
+
+        // ==================== ЗАГРУЗКА СОСТОЯНИЙ СТИКЕРА ====================
+        window.loadStickerStates = async function() {
+            readConfig();
+            if (!tokenManagement || !stateStickerId) {
+                addLog('Введите ключ и ID стикера', 'error');
+                return;
+            }
+
+            addLog('Загружаем состояния стикера...', 'info');
+            
+            try {
+                const stickerRes = await fetch(`https://ru.yougile.com/api-v2/string-stickers/${stateStickerId}`, {
+                    headers: {'Authorization': `Bearer ${tokenManagement}`}
+                });
+                    
+                if (stickerRes.ok) {
+                    const sticker = await stickerRes.json();
+                    displayStickerStates(sticker);
+                } else {
+                    addLog('Не удалось загрузить стикер', 'error');
+                }
+            } catch(e) {
+                addLog(`Ошибка: ${e.message}`, 'error');
+            }
+        };
+
+        function displayStickerStates(sticker) {
+            if (!sticker || !sticker.states) return;
+            
+            let html = `<strong>🎯 Стикер: "${sticker.name}"</strong><br>`;
+            html += '<div style="margin-top:8px;">';
+            
+            for (const state of sticker.states) {
+                html += `<span class="sticker-state" style="background:${state.color || '#ccc'};">${state.name} <code>${state.id}</code></span> `;
+            }
+            html += '</div>';
+            html += '<div style="margin-top:8px; font-size:0.8rem;">Используйте эти ID в полях выше для синхронизации статусов</div>';
+            
+            el.stickerStatesInfo.innerHTML = html;
+            el.stickerStatesInfo.style.display = 'block';
+            
+            for (const state of sticker.states) {
+                const name = state.name.toLowerCase();
+                if (name.includes('ожидан')) el.stateWaiting.value = state.id;
+                if (name.includes('работе') || name.includes('progress')) el.stateInProgress.value = state.id;
+                if (name.includes('бэклог') || name.includes('backlog')) el.stateBacklog.value = state.id;
+                if (name.includes('выполнен') || name.includes('done') || name.includes('готов')) el.stateCompleted.value = state.id;
+            }
+            readConfig();
+        }
+
+        // ==================== ПОИСК КОЛОНОК ====================
+        async function findColumnByKeyword(token, keyword) {
+            try {
+                const boardsRes = await fetch('https://ru.yougile.com/api-v2/boards', {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                if (!boardsRes.ok) return null;
+                
+                const boards = (await boardsRes.json()).content || [];
+                const kw = keyword.toLowerCase();
+                
+                for (const board of boards) {
+                    try {
+                        const colsRes = await fetch(`https://ru.yougile.com/api-v2/columns?boardId=${board.id}`, {
+                            headers: {'Authorization': `Bearer ${token}`}
+                        });
+                        if (!colsRes.ok) continue;
+                        
+                        for (const col of (await colsRes.json()).content || []) {
+                            if ((col.title || col.name || '').toLowerCase().includes(kw)) {
+                                return { id: col.id, name: col.title || col.name, boardName: board.title || '' };
+                            }
+                        }
+                    } catch(e) {}
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                return null;
+            } catch(e) { return null; }
+        }
+
+        window.findDelegatedColumn = async function() {
+            readConfig();
+            if (!tokenManagement) return;
+            const found = await findColumnByKeyword(tokenManagement, 'делигирован');
+            if (found) {
+                el.delegatedColId.value = found.id;
+                delegatedColumnId = found.id;
+                addLog(`✅ "${found.name}" [${found.id}]`, 'success');
+                saveConfig();
+            } else {
+                addLog('Не найдена', 'error');
+            }
+        };
+
+        window.findMetodistBacklogColumn = async function() {
+            readConfig();
+            let found = await findColumnByKeyword(tokenMetodist, 'бэклог');
+            if (!found) found = await findColumnByKeyword(tokenMetodist, 'backlog');
+            if (found) {
+                el.metodistBacklog.value = found.id;
+                metodistBacklogId = found.id;
+                addLog(`✅ "${found.name}" [${found.id}]`, 'success');
+                saveConfig();
+            } else {
+                addLog('Не найдена', 'error');
+            }
+        };
+
+        window.initializeApp = async function() {
+            readConfig();
+            if (!tokenManagement) { addLog('Введите ключ', 'error'); return; }
+
+            try {
+                const r = await fetch('https://ru.yougile.com/api-v2/users/me', {
+                    headers: {'Authorization': `Bearer ${tokenManagement}`}
+                });
+                if (r.ok) addLog(`Ключ: ${(await r.json()).email || 'OK'}`, 'success');
+                else { addLog('Ключ недействителен', 'error'); return; }
+            } catch(e) { addLog('Ошибка', 'error'); return; }
+
+            if (!delegatedColumnId) await findDelegatedColumn();
+            if (!metodistBacklogId) await findMetodistBacklogColumn();
+            
+            await loadStickerStates();
+            loadChatCache();
+            loadPinnedCache();
+            saveConfig();
+            addLog('Готово! Нажмите "Загрузить задачи"', 'success');
+        };
+
+        // ==================== ИЗВЛЕЧЕНИЕ ID ====================
+        function extractTaskIds(text) {
+            if (!text) return [];
+            return [...new Set((text.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi) || []))];
+        }
+
+        // ==================== ПОИСК СВЯЗИ ====================
+        async function findMetodistLink(managementTask) {
+            let ids = extractTaskIds(managementTask.description || '');
+            
+            try {
+                const chatRes = await fetch(`https://ru.yougile.com/api-v2/chats/${managementTask.id}/messages?limit=30`, {
+                    headers: {'Authorization': `Bearer ${tokenManagement}`}
+                });
+                if (chatRes.ok) {
+                    for (const msg of (await chatRes.json()).content || []) {
+                        ids.push(...extractTaskIds(msg.text || ''));
+                    }
+                }
+            } catch(e) {}
+            
+            ids = [...new Set(ids)].filter(id => id !== managementTask.id);
+            
+            for (const id of ids) {
+                try {
+                    const checkRes = await fetch(`https://ru.yougile.com/api-v2/tasks/${id}`, {
+                        headers: {'Authorization': `Bearer ${tokenMetodist}`}
+                    });
+                    if (checkRes.ok) {
+                        const mt = await checkRes.json();
+                        return {
+                            metodistTaskId: id,
+                            metodistTitle: mt.title || '',
+                            metodistColumnId: mt.columnId || '',
+                            url: `https://ru.yougile.com/team/${METODIST_COMPANY}/Metodist.#${id}`
+                        };
+                    }
+                } catch(e) {}
+            }
+            return null;
+        }
+
+        // ==================== ЗАГРУЗКА ЗАДАЧ ====================
+        window.loadTasksWithLinks = async function() {
+            readConfig();
+            if (!tokenManagement || !delegatedColumnId) {
+                addLog('Проверьте ключ и колонку', 'error');
+                return;
+            }
+
+            el.delegatedTasksContainer.innerHTML = '<div class="loading-indicator">Загрузка и поиск связей...</div>';
+            
+            try {
+                const res = await fetch(`https://ru.yougile.com/api-v2/tasks?columnId=${delegatedColumnId}&limit=50`, {
+                    headers: {'Authorization': `Bearer ${tokenManagement}`}
+                });
+                if (!res.ok) { addLog('Ошибка загрузки', 'error'); return; }
+                
+                const tasks = (await res.json()).content || [];
+                currentTasks = [];
+                
+                if (!tasks.length) {
+                    el.delegatedTasksContainer.innerHTML = '<div class="no-results">Нет задач</div>';
+                    return;
+                }
+
+                for (const task of tasks) {
+                    const link = await findMetodistLink(task);
+                    currentTasks.push({ managementTask: task, metodistLink: link, found: !!link });
+                    if (link) addLog(`Связь: ${link.metodistTaskId}`, 'success');
+                    else addLog(`⚠️ Нет связи: "${(task.title || '').substring(0, 40)}"`, 'warning');
+                    await new Promise(r => setTimeout(r, 150));
+                }
+
+                addLog(`📊 Связано: ${currentTasks.filter(t=>t.found).length}, Новых: ${currentTasks.filter(t=>!t.found).length}`, 'success');
+                renderAll();
+            } catch(e) { addLog(`Ошибка: ${e.message}`, 'error'); }
+        };
+
+        function renderAll() {
+            renderDelegate();
+            renderSync();
+            renderChat();
+        }
+
+        function renderDelegate() {
+            if (!currentTasks.length) {
+                el.delegatedTasksContainer.innerHTML = '<div class="no-results">Нажмите "Загрузить задачи"</div>';
+                return;
+            }
+
+            el.delegatedTasksContainer.innerHTML = currentTasks.map(item => {
+                const t = item.managementTask;
+                const l = item.metodistLink;
+                const pinned = pinnedMessagesCache[t.id];
+                
+                if (item.found) {
+                    return `<div class="task-item linked">
+                        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                            <div style="flex:1;">
+                                <h3>${escapeHtml(t.title || '—')} <span class="sync-status linked">✅ Связана</span>
+                                ${pinned ? `<span class="pinned-indicator">📌 закреп</span>` : ''}</h3>
+                                <div class="task-meta">
+                                    <span>Mgmt: <span class="highlight-id">${t.id}</span></span>
+                                    <span>Metodist: <span class="highlight-id">${l.metodistTaskId}</span></span>
+                                    ${pinned ? `<span>📌 ID: ${pinned}</span>` : ''}
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <button class="btn btn-warning" style="padding:6px 12px; font-size:0.8rem;" onclick="syncSingleStatus('${t.id}', '${l.metodistTaskId}')">🔁 Статус</button>
+                                <button class="btn btn-info" style="padding:6px 12px; font-size:0.8rem;" onclick="syncSingleChatPinned('${t.id}', '${l.metodistTaskId}')">💬 Чат</button>
+                                <button class="btn btn-primary" style="padding:6px 12px; font-size:0.8rem;" onclick="viewPinnedMessage('${t.id}')">📌 Просмотр</button>
+                                <button class="btn" style="padding:6px 12px; font-size:0.8rem;" onclick="window.open('${l.url}', '_blank')">🔗</button>
+                            </div>
+                        </div>
+                    </div>`;
+                } else {
+                    return `<div class="task-item not-found">
+                        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                            <div style="flex:1;">
+                                <h3>${escapeHtml(t.title || '—')} <span class="sync-status not-linked">Новая</span></h3>
+                                <div class="task-meta"><span>ID: <span class="highlight-id">${t.id}</span></span></div>
+                            </div>
+                            <button class="btn btn-success" style="padding:8px 18px;" onclick="delegateSingleTask('${t.id}', '${escapeHtml(t.title || '').replace(/'/g, "\\'")}')">📤 Делегировать</button>
+                        </div>
+                    </div>`;
+                }
+            }).join('');
+        }
+
+        function renderSync() {
+            const linked = currentTasks.filter(t => t.found);
+            el.syncTasksContainer.innerHTML = linked.length 
+                ? linked.map(item => {
+                    const t = item.managementTask;
+                    const l = item.metodistLink;
+                    return `<div class="task-item linked">
+                        <h3>${escapeHtml(t.title || '—')}</h3>
+                        <div class="task-meta">
+                            <span>Mgmt: <span class="highlight-id">${t.id}</span></span>
+                            <span>Metodist: <span class="highlight-id">${l.metodistTaskId}</span></span>
+                        </div>
+                        <button class="btn btn-warning" style="padding:6px 14px; font-size:0.8rem; margin-top:8px;" onclick="syncSingleStatus('${t.id}', '${l.metodistTaskId}')">🔁 Синхронизировать статус</button>
+                    </div>`;
+                }).join('')
+                : '<div class="no-results">Нет связанных задач</div>';
+        }
+
+        function renderChat() {
+            const linked = currentTasks.filter(t => t.found);
+            el.chatTasksContainer.innerHTML = linked.length
+                ? linked.map(item => {
+                    const t = item.managementTask;
+                    const l = item.metodistLink;
+                    const cache = chatSyncCache[t.id];
+                    const pinned = pinnedMessagesCache[t.id];
+                    return `<div class="task-item linked">
+                        <h3>${escapeHtml(t.title || '—')} ${pinned ? '<span class="pinned-indicator">📌 закреп</span>' : ''}</h3>
+                        <div class="task-meta">
+                            <span>Синхр: ${cache?.syncedMessageIds?.length || 0} сообщ.</span>
+                            ${cache?.lastSync ? `<span>${new Date(cache.lastSync).toLocaleString()}</span>` : ''}
+                            ${pinned ? `<span>📌 ID: ${pinned}</span>` : ''}
+                        </div>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+                            <button class="btn btn-info" style="padding:6px 14px; font-size:0.8rem;" onclick="syncSingleChatPinned('${t.id}', '${l.metodistTaskId}')">💬 Синхронизировать</button>
+                            <button class="btn btn-primary" style="padding:6px 14px; font-size:0.8rem;" onclick="viewPinnedMessage('${t.id}')">📌 Просмотр</button>
+                        </div>
+                    </div>`;
+                }).join('')
+                : '<div class="no-results">Нет связанных задач</div>';
+        }
+
+        // ==================== ДЕЛЕГИРОВАНИЕ ====================
+        window.delegateSingleTask = async function(mgmtId, title) {
+            readConfig();
+            if (!metodistBacklogId) { addLog('Не задана колонка Бэклог!', 'error'); return; }
+            if (!confirm(`Создать в Metodist:\n"${title}"?`)) return;
+
+            try {
+                let desc = '';
+                try {
+                    const tr = await fetch(`https://ru.yougile.com/api-v2/tasks/${mgmtId}`, {
+                        headers: {'Authorization': `Bearer ${tokenManagement}`}
+                    });
+                    if (tr.ok) desc = (await tr.json()).description || '';
+                } catch(e) {}
+
+                const res = await fetch('https://ru.yougile.com/api-v2/tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${tokenMetodist}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title, columnId: metodistBacklogId,
+                        description: `<h3>Задача из проекта "Менеджмент"</h3><p><b>ID:</b> <code>${mgmtId}</code></p>
+<p><b>Тут панель админа базы знаний:</p></b> 
+<p>https://corp-portal.tula.scloud.ru/wp-admin/edit.php?post_type=docs&bdocs_view=classic</p>
+<p><b>Тут шаблон визуального редактора:</p></b> 
+<p>https://vladislav71mails.github.io/konstryktor.github.io/</p>
+<hr><p><b>Прочитай описание задачи, спроси необходимые вопросы в чате или автора задачи в ЛС:</p></b>${desc}`
+                    })
+                });
+
+                if (!res.ok) { addLog(`Ошибка: ${(await res.json().catch(()=>({})).message) || res.status}`, 'error'); return; }
+                
+                const created = await res.json();
+                
+                await fetch(`https://ru.yougile.com/api-v2/chats/${mgmtId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${tokenManagement}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: `✅ Задача делегировано в проект "Metodist", где задачи выполняет инженер ТП\n🔗 https://ru.yougile.com/team/${METODIST_COMPANY}/Metodist.#${created.id}\nID: ${created.id}`
+                    })
+                });
+
+                addLog(`✅ Делегировано! ID: ${created.id}`, 'success');
+                setTimeout(() => loadTasksWithLinks(), 1000);
+            } catch(e) { addLog(`Ошибка: ${e.message}`, 'error'); }
+        };
+
+        window.delegateAllNew = async function() {
+            const newTasks = currentTasks.filter(t => !t.found);
+            if (!newTasks.length) { addLog('Нет новых задач'); return; }
+            if (!confirm(`Делегировать ${newTasks.length}?`)) return;
+            
+            for (const item of newTasks) {
+                await delegateSingleTask(item.managementTask.id, item.managementTask.title || '—');
+                await new Promise(r => setTimeout(r, 500));
+            }
+            setTimeout(() => loadTasksWithLinks(), 1000);
+        };
+
+        // ==================== СИНХРОНИЗАЦИЯ СТАТУСА ====================
+        window.syncSingleStatus = async function(mgmtId, metodistId) {
+            readConfig();
+            
+            try {
+                const res = await fetch(`https://ru.yougile.com/api-v2/tasks/${metodistId}`, {
+                    headers: {'Authorization': `Bearer ${tokenMetodist}`}
+                });
+                if (!res.ok) { addLog('Задача Metodist не найдена', 'error'); return; }
+
+                const task = await res.json();
+                const columnId = task.columnId || '';
+                
+                let columnName = '';
+                try {
+                    const cr = await fetch(`https://ru.yougile.com/api-v2/columns/${columnId}`, {
+                        headers: {'Authorization': `Bearer ${tokenMetodist}`}
+                    });
+                    if (cr.ok) {
+                        columnName = ((await cr.json()).title || '').toLowerCase();
+                    }
+                } catch(e) {}
+
+                addLog(`Колонка Metodist: "${columnName || 'неизвестно'}"`, 'info');
+
+                let stickerStateId = stateWaitingId;
+                let statusText = 'Ожидание';
+
+                if (columnName.includes('выполнен') || columnName.includes('готов') || columnName.includes('done')) {
+                    stickerStateId = stateCompletedId;
+                    statusText = 'Выполнено';
+                } else if (columnName.includes('работе') || columnName.includes('progress') || columnName.includes('in progress')) {
+                    stickerStateId = stateInProgressId;
+                    statusText = 'В работе';
+                } else if (columnName.includes('бэклог') || columnName.includes('backlog') || columnName.includes('беклог')) {
+                    stickerStateId = stateBacklogId;
+                    statusText = 'В бэклоге';
+                } else if (columnName.includes('отменен') || columnName.includes('cancel')) {
+                    stickerStateId = '282739a0eed4';
+                    statusText = 'Отменено';
+                }
+
+                addLog(`Определен статус: ${statusText} (стикер: ${stickerStateId})`, 'info');
+
+                if (stateStickerId && stickerStateId) {
+                    const updateRes = await fetch(`https://ru.yougile.com/api-v2/tasks/${mgmtId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${tokenManagement}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            stickers: {
+                                [stateStickerId]: stickerStateId
+                            }
+                        })
+                    });
+
+                    if (updateRes.ok) {
+                        addLog(`✅ Статус обновлен → ${statusText}`, 'success');
+                        
+                        try {
+                            await fetch(`https://ru.yougile.com/api-v2/chats/${mgmtId}/messages`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${tokenManagement}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    text: `🔄 Был выполнен запрос синхронизации статуса по задаче: **${statusText}**\n_проект "Metodist" (колонка: ${columnName || 'неизвестно'})_`
+                                })
+                            });
+                        } catch(e) {}
+                    } else {
+                        const errData = await updateRes.json().catch(() => ({}));
+                        addLog(`❌ Ошибка обновления стикера: ${errData.message || 'Неизвестно'}`, 'error');
+                    }
+                } else {
+                    addLog('❌ Не задан ID стикера или состояния', 'error');
+                }
+            } catch(e) {
+                addLog(`Ошибка: ${e.message}`, 'error');
+            }
+        };
+
+        window.syncAllStatuses = async function() {
+            const linked = currentTasks.filter(t => t.found);
+            if (!linked.length) { addLog('Нет связанных задач', 'warning'); return; }
+
+            for (const item of linked) {
+                await syncSingleStatus(item.managementTask.id, item.metodistLink.metodistTaskId);
+                await new Promise(r => setTimeout(r, 300));
+            }
+            addLog('✅ Синхронизация статусов завершена', 'success');
+        };
+
+        // ==================== ПОЛУЧЕНИЕ ИНФОРМАЦИИ О ПОЛЬЗОВАТЕЛЕ ====================
+        async function getUserInfo(userId, token) {
+            if (userCache[userId]) return userCache[userId];
+            
+            try {
+                const res = await fetch(`https://ru.yougile.com/api-v2/users/${userId}`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                if (res.ok) {
+                    const user = await res.json();
+                    userCache[userId] = user;
+                    return user;
+                }
+            } catch(e) {}
+            return null;
+        }
+
+        // ==================== ФОРМАТИРОВАНИЕ СООБЩЕНИЯ С СОХРАНЕНИЕМ HTML ====================
+        function formatMessageWithHtml(text) {
+            if (!text) return '';
+            
+            // Сохраняем HTML-теги, которые приходят из API
+            // Просто экранируем, чтобы не сломать
+            let formatted = text;
+            
+            // Заменяем переносы строк на <br> только если нет HTML
+            if (!formatted.includes('<') && !formatted.includes('>')) {
+                formatted = formatted.replace(/\n/g, '<br>');
+            }
+            
+            return formatted;
+        }
+
+        function buildPinnedMessageHtml(messages, userCache) {
+            let html = '<div class="pinned-message-preview">';
+            
+            // Заголовок
+            html += '<p style="font-weight: 600; font-size: 1.1rem; margin-bottom: 16px;">📋 Синхронизация чата из проекта "Metodist"</p>';
+            
+            // Сортируем сообщения по времени
+            const sortedMessages = [...messages].sort((a, b) => a.id - b.id);
+            
+            for (const msg of sortedMessages) {
+                const user = userCache[msg.fromUserId] || { realName: 'Неизвестный', email: '' };
+                const author = user.realName || user.email || 'Неизвестный';
+                const isBot = msg.fromUserId === BOT_USER_ID;
+                
+                // Имя автора
+                const authorClass = isBot ? 'msg-author bot' : 'msg-author user';
+                const authorIcon = isBot ? '🤖' : '👤';
+                html += `<p class="${authorClass}">${authorIcon} <u>${escapeHtml(author)}</u></p>`;
+                
+                // Текст сообщения с сохранением форматирования
+                let text = msg.text || '';
+                
+                // Проверяем, есть ли HTML-форматирование в properties
+                if (msg.properties && msg.properties.textHtml) {
+                    // Используем HTML из API
+                    html += `<div class="msg-text ${isBot ? 'bot' : ''}">${msg.properties.textHtml}</div>`;
+                } else {
+                    // Форматируем обычный текст
+                    let formattedText = formatMessageWithHtml(text);
+                    html += `<div class="msg-text ${isBot ? 'bot' : ''}">${formattedText}</div>`;
+                }
+            }
+            
+            // Добавляем дату актуализации
+            const now = new Date().toLocaleString('ru-RU', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+            
+            html += `<hr>`;
+            html += `<p style="font-size: 0.85rem; color: #94a3b8; margin: 4px 0;">📅 Актуализировано: ${now}</p>`;
+            html += `<p style="font-size: 0.85rem; color: #94a3b8; margin: 4px 0;">🔄 Источник: проект "Metodist" (${messages.length} сообщ.)</p>`;
+            
+            html += '</div>';
+            return html;
+        }
+
+        // ==================== ЗАКРЕПЛЕНИЕ СООБЩЕНИЯ ====================
+        async function pinMessage(chatId, messageId) {
+            try {
+                const pinRes = await fetch(`https://ru.yougile.com/api-v2/chats/${chatId}/pin/${messageId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${tokenManagement}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (pinRes.ok) {
+                    return true;
+                }
+
+                const pinRes2 = await fetch(`https://ru.yougile.com/api-v2/chats/${chatId}/messages/${messageId}/pin`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${tokenManagement}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (pinRes2.ok) {
+                    return true;
+                }
+
+                const updateRes = await fetch(`https://ru.yougile.com/api-v2/chats/${chatId}/messages/${messageId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${tokenManagement}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        deleted: false,
+                        label: 'Синхра чата'
+                    })
+                });
+
+                return updateRes.ok;
+            } catch(e) {
+                return false;
+            }
+        }
+
+        // ==================== ПОИСК ЗАКРЕПЛЕННОГО СООБЩЕНИЯ В ЧАТЕ ====================
+        async function findPinnedMessageInChat(chatId) {
+            try {
+                // Получаем сообщения чата
+                const res = await fetch(`https://ru.yougile.com/api-v2/chats/${chatId}/messages?limit=100`, {
+                    headers: {'Authorization': `Bearer ${tokenManagement}`}
+                });
+                
+                if (!res.ok) return null;
+                
+                const data = await res.json();
+                const messages = data.content || [];
+                
+                // Ищем сообщение с label "Синхра чата"
+                for (const msg of messages) {
+                    if (msg.label === 'Синхра чата' || msg.label === 'Синхр чата') {
+                        return msg.id;
+                    }
+                }
+                
+                // Если не нашли по label, ищем по тексту
+                for (const msg of messages) {
+                    if (msg.text && msg.text.includes('Синхронизация чата из проекта')) {
+                        return msg.id;
+                    }
+                }
+                
+                return null;
+            } catch(e) {
+                return null;
+            }
+        }
+
+        // ==================== СИНХРОНИЗАЦИЯ ЧАТА С ЗАКРЕПЛЕННЫМ СООБЩЕНИЕМ ====================
+        window.syncSingleChatPinned = async function(mgmtId, metodistId) {
+            readConfig();
+            addLog(`📌 Начинаем синхронизацию чата для задачи ${mgmtId}`, 'info');
+            
+            try {
+                // 1. Получаем сообщения из чата Metodist
+                const res = await fetch(`https://ru.yougile.com/api-v2/chats/${metodistId}/messages?limit=${chatSyncLimit}`, {
+                    headers: {'Authorization': `Bearer ${tokenMetodist}`}
+                });
+                if (!res.ok) {
+                    addLog('Ошибка получения сообщений из Metodist', 'error');
+                    return;
+                }
+
+                const data = await res.json();
+                const messages = data.content || [];
+                if (!messages.length) {
+                    addLog('Нет сообщений в чате Metodist', 'info');
+                    return;
+                }
+
+                // 2. Получаем информацию о пользователях
+                for (const msg of messages) {
+                    if (msg.fromUserId && !userCache[msg.fromUserId]) {
+                        await getUserInfo(msg.fromUserId, tokenMetodist);
+                    }
+                }
+
+                // 3. Инициализируем кэш если нет
+                if (!chatSyncCache[mgmtId]) {
+                    chatSyncCache[mgmtId] = { 
+                        metodistTaskId: metodistId, 
+                        syncedMessageIds: [], 
+                        lastSync: null
+                    };
+                }
+                
+                const cache = chatSyncCache[mgmtId];
+                
+                // 4. Находим новые сообщения
+                const newMsgs = messages.filter(m => !cache.syncedMessageIds.includes(m.id));
+                
+                addLog(`📊 Найдено ${messages.length} сообщений, из них новых: ${newMsgs.length}`, 'info');
+
+                // 5. Формируем HTML-содержимое закрепленного сообщения
+                const pinnedHtml = buildPinnedMessageHtml(messages, userCache);
+                
+                // Для отправки в API используем plain text
+                let fullText = 'Синхронизация чата из проекта "Metodist"\n\n';
+                
+                const sortedMessages = [...messages].sort((a, b) => a.id - b.id);
+                
+                for (const msg of sortedMessages) {
+                    const user = userCache[msg.fromUserId] || { realName: 'Неизвестный', email: '' };
+                    const author = user.realName || user.email || 'Неизвестный';
+                    const isBot = msg.fromUserId === BOT_USER_ID;
+                    
+                    if (isBot) {
+                        fullText += `🤖 ${author}:\n`;
+                    } else {
+                        fullText += `👤 ${author}:\n`;
+                    }
+                    
+                    let text = msg.text || '';
+                    fullText += text + '\n\n';
+                }
+
+                // Добавляем дату актуализации
+                const now = new Date().toLocaleString('ru-RU', {
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+                fullText += `\n---\n📅 Актуализировано: ${now}\n`;
+                fullText += `🔄 Источник: проект "Metodist" (${messages.length} сообщ.)`;
+
+                // 6. Ищем закрепленное сообщение в чате
+                let pinnedMsgId = pinnedMessagesCache[mgmtId];
+                
+                // Если в кэше нет, ищем в чате
+                if (!pinnedMsgId) {
+                    addLog(`🔍 Ищем закрепленное сообщение в чате...`, 'info');
+                    pinnedMsgId = await findPinnedMessageInChat(mgmtId);
+                    if (pinnedMsgId) {
+                        addLog(`✅ Найдено закрепленное сообщение: ${pinnedMsgId}`, 'success');
+                        pinnedMessagesCache[mgmtId] = pinnedMsgId;
+                        savePinnedCache();
+                    }
+                }
+
+                let messageId = null;
+
+                // 7. Если есть закреп - обновляем его
+                if (pinnedMsgId) {
+                    try {
+                        addLog(`📝 Обновляем существующее сообщение ${pinnedMsgId}`, 'info');
+                        
+                        const updateRes = await fetch(`https://ru.yougile.com/api-v2/chats/${mgmtId}/messages/${pinnedMsgId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${tokenManagement}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                text: fullText,
+                                deleted: false,
+                                label: 'Синхра чата'
+                            })
+                        });
+
+                        if (updateRes.ok) {
+                            addLog(`✅ Сообщение обновлено`, 'success');
+                            messageId = pinnedMsgId;
+                        } else {
+                            addLog(`⚠️ Не удалось обновить сообщение, создаем новое`, 'warning');
+                            pinnedMsgId = null;
+                        }
+                    } catch(e) {
+                        addLog(`⚠️ Ошибка обновления: ${e.message}`, 'warning');
+                        pinnedMsgId = null;
+                    }
+                }
+
+                // 8. Если нет закрепленного сообщения или не удалось обновить - создаем новое
+                if (!pinnedMsgId) {
+                    addLog(`📝 Создаем новое закрепленное сообщение`, 'info');
+                    
+                    const createRes = await fetch(`https://ru.yougile.com/api-v2/chats/${mgmtId}/messages`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${tokenManagement}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            text: fullText,
+                            label: 'Синхра чата'
+                        })
+                    });
+
+                    if (!createRes.ok) {
+                        addLog('❌ Не удалось создать сообщение', 'error');
+                        return;
+                    }
+
+                    const created = await createRes.json();
+                    messageId = created.id;
+                    addLog(`✅ Создано новое сообщение: ${messageId}`, 'success');
+                }
+
+                // 9. Закрепляем сообщение (если новое)
+                if (messageId && !pinnedMsgId) {
+                    const pinned = await pinMessage(mgmtId, messageId);
+                    if (pinned) {
+                        addLog(`📌 Сообщение закреплено!`, 'success');
+                    } else {
+                        addLog(`⚠️ Не удалось закрепить сообщение`, 'warning');
+                    }
+                    
+                    pinnedMessagesCache[mgmtId] = messageId;
+                    el.pinnedMessageId.value = messageId;
+                    savePinnedCache();
+                    saveConfig();
+                }
+
+                // 10. Обновляем кэш синхронизированных сообщений
+                const allNewMsgIds = newMsgs.map(m => m.id);
+                if (allNewMsgIds.length > 0) {
+                    cache.syncedMessageIds = [...cache.syncedMessageIds, ...allNewMsgIds];
+                }
+                cache.lastSync = new Date().toISOString();
+                saveChatCache();
+
+                // 11. Обновляем интерфейс
+                renderAll();
+                addLog(`✅ Синхронизация чата завершена! Добавлено ${newMsgs.length} сообщений`, 'success');
+
+            } catch(e) {
+                addLog(`❌ Ошибка: ${e.message}`, 'error');
+                console.error(e);
+            }
+        };
+
+        // ==================== СИНХРОНИЗАЦИЯ ВСЕХ ЧАТОВ ====================
+        window.syncAllChats = async function() {
+            const linked = currentTasks.filter(t => t.found);
+            if (!linked.length) { addLog('Нет связанных задач', 'warning'); return; }
+            
+            addLog(`📌 Начинаем синхронизацию ${linked.length} чатов...`, 'info');
+            
+            let totalNew = 0;
+            for (const item of linked) {
+                const before = chatSyncCache[item.managementTask.id]?.syncedMessageIds?.length || 0;
+                await syncSingleChatPinned(item.managementTask.id, item.metodistLink.metodistTaskId);
+                const after = chatSyncCache[item.managementTask.id]?.syncedMessageIds?.length || 0;
+                totalNew += (after - before);
+                await new Promise(r => setTimeout(r, 300));
+            }
+            addLog(`✅ Синхронизация всех чатов завершена! Добавлено ${totalNew} сообщений`, 'success');
+            renderAll();
+        };
+
+        // ==================== ПРОСМОТР ЗАКРЕПЛЕННОГО СООБЩЕНИЯ ====================
+        window.viewPinnedMessage = async function(mgmtId) {
+            const pinnedMsgId = pinnedMessagesCache[mgmtId];
+            if (!pinnedMsgId) {
+                addLog('Нет закрепленного сообщения для этой задачи', 'warning');
+                return;
+            }
+
+            try {
+                const res = await fetch(`https://ru.yougile.com/api-v2/chats/${mgmtId}/messages/${pinnedMsgId}`, {
+                    headers: {'Authorization': `Bearer ${tokenManagement}`}
+                });
+
+                if (!res.ok) {
+                    addLog('Сообщение не найдено', 'error');
+                    return;
+                }
+
+                const msg = await res.json();
+                // Отображаем с сохранением форматирования
+                let content = msg.text || '(пустое сообщение)';
+                // Заменяем переносы на <br> для отображения
+                content = content.replace(/\n/g, '<br>');
+                document.getElementById('pinnedModalContent').innerHTML = content;
+                document.getElementById('pinnedModal').classList.add('active');
+            } catch(e) {
+                addLog(`Ошибка: ${e.message}`, 'error');
+            }
+        };
+
+        window.closePinnedModal = function() {
+            document.getElementById('pinnedModal').classList.remove('active');
+        };
+
+        window.copyPinnedContent = function() {
+            const content = document.getElementById('pinnedModalContent').textContent;
+            navigator.clipboard.writeText(content).then(() => {
+                addLog('📋 Скопировано в буфер обмена', 'success');
+            }).catch(() => {
+                const textarea = document.createElement('textarea');
+                textarea.value = content;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                addLog('📋 Скопировано в буфер обмена', 'success');
+            });
+        };
+
+        // Закрытие модального окна по клику вне его
+        document.getElementById('pinnedModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePinnedModal();
+            }
+        });
+
+        // ==================== ОЧИСТКА ЗАКРЕПЛЕННОГО СООБЩЕНИЯ ====================
+        window.clearPinnedMessage = async function() {
+            const mgmtId = prompt('Введите ID задачи для очистки закрепленного сообщения:');
+            if (!mgmtId) return;
+
+            const pinnedMsgId = pinnedMessagesCache[mgmtId];
+            if (!pinnedMsgId) {
+                addLog('Нет закрепленного сообщения для этой задачи', 'warning');
+                return;
+            }
+
+            if (!confirm(`Удалить закрепленное сообщение ${pinnedMsgId}?`)) return;
+
+            try {
+                const res = await fetch(`https://ru.yougile.com/api-v2/chats/${mgmtId}/messages/${pinnedMsgId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${tokenManagement}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        deleted: true
+                    })
+                });
+
+                if (res.ok) {
+                    delete pinnedMessagesCache[mgmtId];
+                    savePinnedCache();
+                    renderAll();
+                    addLog(`✅ Закрепленное сообщение удалено`, 'success');
+                } else {
+                    addLog('❌ Не удалось удалить сообщение', 'error');
+                }
+            } catch(e) {
+                addLog(`Ошибка: ${e.message}`, 'error');
+            }
+        };
+
+        // ==================== ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ====================
+        window.switchTab = function(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => {
+                if ((tab === 'delegate' && t.textContent.includes('Делегирование')) ||
+                    (tab === 'sync' && t.textContent.includes('Статусы')) ||
+                    (tab === 'chat' && t.textContent.includes('Чаты'))) {
+                    t.classList.add('active');
+                }
+            });
+            document.getElementById('delegateSection').style.display = tab === 'delegate' ? 'block' : 'none';
+            document.getElementById('syncSection').style.display = tab === 'sync' ? 'block' : 'none';
+            document.getElementById('chatSection').style.display = tab === 'chat' ? 'block' : 'none';
+        };
+
+        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+        el.tokenMetodist.value = METODIST_API_KEY;
+        loadConfig();
+        
+        addLog('Задачи синхронизируется только из колонки "Делегированые задачи" на доске "Колотилов В."', 'success');
+        addLog('1. Нажмите "Авторизация"', 'info');
+        addLog('2. Затем "Делегирование"', 'info');
+        addLog('3. Затем "Загрузить задачи и найти связи"', 'info');
+        addLog('📌 Для синхронизации чата используйте кнопку "Синхронизировать чат (закреп)"', 'info');
+    })();
+</script>
+</body>
+</html>

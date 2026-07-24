@@ -32,9 +32,11 @@
         .btn:active { transform: translateY(0); }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e3ebf6; padding-bottom: 15px; flex-wrap: wrap; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e3ebf6; padding-bottom: 15px; flex-wrap: wrap; align-items: center; }
         .tab { padding: 10px 24px; border-radius: 20px; border: 1px solid #c1d3e8; background: white; cursor: pointer; font-size: 0.95rem; transition: all 0.2s; }
         .tab.active { background: #1e3f6e; color: white; border-color: #1e3f6e; }
+        .tab-link { padding: 10px 24px; border-radius: 20px; border: 1px solid #c1d3e8; background: #f0f4ff; color: #1e3f6e; text-decoration: none; font-size: 0.95rem; transition: all 0.2s; font-weight: 600; cursor: pointer; display: inline-block; }
+        .tab-link:hover { background: #1e3f6e; color: white; border-color: #1e3f6e; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
         .result-card { background: #eaf1fd; border-radius: 22px; padding: 20px 26px; margin: 20px 0; border-left: 6px solid #2563eb; }
         .column-preview { background: #ffffffc7; border-radius: 18px; padding: 14px 20px; display: flex; flex-wrap: wrap; gap: 10px 20px; border: 1px solid white; font-size: 0.85rem; margin-top: 10px; }
@@ -116,6 +118,7 @@
         <div class="api-box">
             <label>API Токен:</label>
             <input type="password" id="apiToken" placeholder="Введите API ключ YouGile" autocomplete="off">
+             <a class="tab-link" href="reg_api.html" target="_blank" title="Токен">Создать токен</a>
             <button class="btn btn-primary" onclick="checkToken()">Проверить</button>
         </div>
 
@@ -128,7 +131,8 @@
             <div class="tabs">
                 <button class="tab active" onclick="switchTab('employee')">Поиск сотрудника</button>
                 <button class="tab" onclick="switchTab('task')">Поиск задач</button>
-                <button class="tab" onclick="switchTab('priority')">Приоритизация задач по критериям</button>
+                <button class="tab" onclick="switchTab('priority')">Приоритизация</button>
+                <a class="tab-link" href="delegation.html" target="_blank" title="Открыть делегирования">Делегирование</a>
             </div>
             
             <!-- Поиск сотрудника -->
@@ -329,6 +333,47 @@
         let allStickers = {};
         let stickersLoaded = false;
 
+        // ============ ЗАГРУЗКА/СОХРАНЕНИЕ ТОКЕНА В LOCALSTORAGE ============
+        const TOKEN_STORAGE_KEY = 'yougile_api_token';
+
+        function loadTokenFromStorage() {
+            const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+            if (savedToken) {
+                el.token.value = savedToken;
+                addLog('Токен загружен из локального хранилища');
+                // Автоматически проверяем токен при загрузке
+                setTimeout(() => checkToken(), 500);
+            }
+        }
+
+        function saveTokenToStorage(token) {
+            if (token) {
+                localStorage.setItem(TOKEN_STORAGE_KEY, token);
+                addLog('Токен сохранён в локальном хранилище');
+            } else {
+                localStorage.removeItem(TOKEN_STORAGE_KEY);
+                addLog('Токен удалён из локального хранилища');
+            }
+        }
+
+        // Сохраняем токен при изменении поля
+        el.token.addEventListener('input', function() {
+            const tokenValue = this.value.trim();
+            if (tokenValue.length > 10) {
+                saveTokenToStorage(tokenValue);
+            } else if (tokenValue.length === 0) {
+                saveTokenToStorage('');
+            }
+        });
+
+        // Сохраняем токен при потере фокуса
+        el.token.addEventListener('blur', function() {
+            const tokenValue = this.value.trim();
+            if (tokenValue.length > 0) {
+                saveTokenToStorage(tokenValue);
+            }
+        });
+
         // ============ ПРИОРИТИЗАЦИЯ BA ============
         const criteriaData = [
             { id: 1, name: "Влияние на частоту обращаемости", question: "Снизит ли задача количество входящих обращений на Х%?", maxScore: 5 },
@@ -492,20 +537,6 @@
             renderCriteria();
         }
 
-        function loadExampleScores() {
-            currentScores = {
-                1: 3,
-                2: 4,
-                3: 3,
-                4: 2,
-                5: 2,
-                6: 4
-            };
-            renderCriteria();
-            const nameInput = document.getElementById('priorityTaskName');
-            if (nameInput) nameInput.value = "Инструкция по настройке VPN (пример)";
-        }
-
         // ============ ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ============
         window.switchTab = function(tab) {
             currentTab = tab;
@@ -567,9 +598,13 @@
                 if(r.ok) {
                     const user = await r.json();
                     addLog(`Токен действителен. Пользователь: ${user.email || user.name || 'OK'}`);
+                    // Сохраняем токен при успешной проверке
+                    saveTokenToStorage(token);
                     loadStickers();
                 } else {
                     addLog('Токен недействителен', true);
+                    // Удаляем невалидный токен
+                    saveTokenToStorage('');
                 }
             } catch(e) {
                 addLog('Ошибка проверки токена', true);
@@ -1037,8 +1072,6 @@
             }
         };
 
-        document.getElementById('loadExampleScores').onclick = loadExampleScores;
-
         document.getElementById('clearPriorityTasksBtn').onclick = () => {
             if (priorityTasks.length === 0) return;
             if (confirm('Удалить все оценённые задачи?')) {
@@ -1055,6 +1088,7 @@
         
         el.token.onchange = () => {
             if(el.token.value.trim().length > 10) {
+                saveTokenToStorage(el.token.value.trim());
                 loadData();
                 loadStickers();
             }
@@ -1063,6 +1097,9 @@
         // Инициализация при загрузке
         renderCriteria();
         renderPriorityTaskList();
+        
+        // Загружаем токен из localStorage при старте
+        loadTokenFromStorage();
     })();
 </script>
 </body>
