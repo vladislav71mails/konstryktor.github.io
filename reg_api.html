@@ -199,81 +199,149 @@
         }
         .tab-link { padding: 10px 24px; border-radius: 20px; border: 1px solid #c1d3e8; background: #f0f4ff; color: #1e3f6e; text-decoration: none; font-size: 0.95rem; transition: all 0.2s; font-weight: 600; cursor: pointer; display: inline-block; }
         .tab-link:hover { background: #1e3f6e; color: white; border-color: #1e3f6e; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+        .btn-row .btn { flex: 1; min-width: 140px; margin-bottom: 0; }
+        .btn-secondary-soft {
+            background: #eef4ff;
+            border-color: #b9d1f0;
+            color: #1e3f6e;
+            box-shadow: none;
+        }
+        .btn-secondary-soft:hover { background: #dbe7fa; }
+        .keys-list {
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .key-item {
+            background: #f4f8ff;
+            border: 1px solid #c5d8f0;
+            border-radius: 18px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .key-item-meta {
+            font-size: 0.8rem;
+            color: #4f658d;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 14px;
+        }
+        .key-item-key {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.82rem;
+            word-break: break-all;
+            color: #0b2a50;
+            background: #fff;
+            border-radius: 10px;
+            padding: 8px 10px;
+            border: 1px solid #d2e0f2;
+        }
+        .key-item-actions { display: flex; gap: 8px; }
+        .key-item-actions button {
+            border: 1px solid #b9d1f0;
+            background: #fff;
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            color: #1e3f6e;
+            font-weight: 600;
+        }
+        .key-item-actions button:hover { background: #1e3f6e; color: #fff; }
+        .key-item.deleted { opacity: 0.55; }
+        .keys-empty { color: #4f658d; font-size: 0.9rem; padding: 8px 0; }
+        .section-title {
+            font-weight: 600;
+            color: #1e3f6e;
+            margin: 0 0 10px;
+            font-size: 1rem;
+        }
     </style>
 </head>
 <body>
 <div class="key-card">
     <div class="header">
-        <h2>Генерация ключа</h2>
+        <h2>Ключи YouGile API</h2>
+        <p>Создание и просмотр API-ключей компании</p>
     </div>
     <div class="content">
-        <!-- Форма входа -->
         <div class="form-group">
-            <label>Логин (email) от юджайла</label>
+            <label>Логин (email) от YouGile</label>
             <input type="email" id="loginInput" placeholder="например, ivanov@company.ru" value="test@yougile.com">
         </div>
         <div class="form-group">
-            <label>Пароль от юджайла</label>
+            <label>Пароль от YouGile</label>
             <input type="password" id="passwordInput" placeholder="············" value="">
         </div>
 
-        <!-- Кнопка запроса ключа -->
-        <button class="btn btn-primary" id="generateBtn">Сгенерировать API-ключ</button>
+        <div class="btn-row">
+            <button class="btn btn-primary" id="generateBtn" type="button">Сгенерировать ключ</button>
+            <button class="btn btn-secondary-soft" id="listKeysBtn" type="button">Посмотреть созданные ключи</button>
+        </div>
 
-        <!-- Блок результата -->
         <div class="result-area" id="resultBlock" style="display: none;">
             <div class="result-label">ваш персональный ключ</div>
-            <div class="key-display" id="keyDisplay">H6HngIA816fpIhY7tBvWx/it3YbVvEt/33Sk8afA39MCR9a</div>
+            <div class="key-display" id="keyDisplay"></div>
             <div class="flex-row">
-                <button class="copy-btn" id="copyBtn">Скопировать</button>
-                <span style="color:#7ca2cf; font-size:0.9rem; margin-left:auto;">💡 ключ нигде не хранится. Cохраните его</span>
+                <button class="copy-btn" id="copyBtn" type="button">Скопировать</button>
+                <span style="color:#7ca2cf; font-size:0.9rem; margin-left:auto;">💡 ключ нигде не хранится — сохраните его</span>
             </div>
             <div class="warning-note" id="errorMessage" style="display: none;"></div>
         </div>
 
+        <div id="keysListBlock" style="display:none; margin-top: 22px;">
+            <div class="section-title">Созданные ключи</div>
+            <div class="keys-list" id="keysList"></div>
+        </div>
+
         <hr>
         <div style="margin-top: 16px; background:#edf4fe; border-radius: 30px; padding: 12px 18px;">
-            <span style="color: #1e3f6e;">💡 После генерации сохраните ключ в <B>KeePass</B></span>
+            <span style="color: #1e3f6e;">💡 После генерации сохраните ключ в <b>KeePass</b>. Максимум 30 ключей на аккаунт.</span>
         </div>
-           <a class="tab-link" href="api_v2.html" target="_blank" title="Токен">Вход в утилиту</a>
+        <div style="margin-top: 14px; display:flex; gap:10px; flex-wrap:wrap;">
+            <a class="tab-link" href="index.html" title="Редактор">← В редактор</a>
+        </div>
     </div>
 </div>
 
 <script>
     (function() {
         const COMPANY_ID = '89e4e708-e101-46ce-885f-4797d3e814d4';
+        const API_BASE = 'https://yougile.com/api-v2';
 
         const loginInput = document.getElementById('loginInput');
         const passwordInput = document.getElementById('passwordInput');
         const generateBtn = document.getElementById('generateBtn');
+        const listKeysBtn = document.getElementById('listKeysBtn');
         const resultBlock = document.getElementById('resultBlock');
         const keyDisplay = document.getElementById('keyDisplay');
         const errorMessage = document.getElementById('errorMessage');
         const copyBtn = document.getElementById('copyBtn');
+        const keysListBlock = document.getElementById('keysListBlock');
+        const keysList = document.getElementById('keysList');
 
-        // Сброс отображения результата перед новой генерацией
         function hideResult() {
             resultBlock.style.display = 'none';
             errorMessage.style.display = 'none';
         }
 
-        // Показать ошибку
         function showError(text) {
             resultBlock.style.display = 'block';
             keyDisplay.innerText = '─── ошибка ───';
             errorMessage.style.display = 'block';
-            errorMessage.innerText = `❌ ${text}`;
-            // скрываем старый ключ
+            errorMessage.innerText = '❌ ' + text;
         }
 
-        // Показать ключ
         function showKey(key) {
             resultBlock.style.display = 'block';
             keyDisplay.innerText = key;
             errorMessage.style.display = 'none';
         }
 
-        // Валидация
         function validateInputs() {
             const login = loginInput.value.trim();
             const pass = passwordInput.value.trim();
@@ -285,7 +353,6 @@
                 showError('Введите пароль');
                 return false;
             }
-            // простая проверка email
             if (!login.includes('@') || !login.includes('.')) {
                 showError('Введите корректный email');
                 return false;
@@ -293,85 +360,176 @@
             return true;
         }
 
-        // Генерация ключа
-        async function generateKey() {
-            // сброс
-            hideResult();
+        function authBody() {
+            return {
+                login: loginInput.value.trim(),
+                password: passwordInput.value.trim(),
+                companyId: COMPANY_ID
+            };
+        }
 
+        async function generateKey() {
+            hideResult();
             if (!validateInputs()) return;
 
-            const login = loginInput.value.trim();
-            const password = passwordInput.value.trim();
-
-            // Блокируем кнопку
             generateBtn.disabled = true;
             generateBtn.innerText = '⏳ Создание ключа...';
 
             try {
-                const response = await fetch('https://yougile.com/api-v2/auth/keys', {
+                const response = await fetch(API_BASE + '/auth/keys', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        login: login,
-                        password: password,
-                        companyId: COMPANY_ID
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(authBody())
                 });
-
                 const data = await response.json();
-
                 if (response.ok && data.key) {
                     showKey(data.key);
                 } else {
-                    // Обработка ошибки от сервера
                     const errorText = data.message || data.error || JSON.stringify(data);
-                    showError(`Ошибка ${response.status}: ${errorText}`);
+                    showError('Ошибка ' + response.status + ': ' + errorText);
                 }
             } catch (error) {
-                showError(`Сетевая ошибка: ${error.message}. Проверьте подключение к YouGile.`);
+                showError('Сетевая ошибка: ' + error.message + '. Проверьте подключение к YouGile.');
             } finally {
                 generateBtn.disabled = false;
                 generateBtn.innerText = 'Сгенерировать ключ';
-                // Пароль лучше сбросить? Но оставим на усмотрение пользователя, можно не сбрасывать.
-                // Для безопасности поле пароля не очищаем автоматически, но даём возможность скопировать ключ.
             }
         }
 
-        // Копирование ключа
-        copyBtn.addEventListener('click', () => {
+        function formatTs(ts) {
+            if (!ts) return '—';
+            const n = Number(ts);
+            const d = isNaN(n) ? new Date(ts) : new Date(n < 1e12 ? n * 1000 : n);
+            if (isNaN(d.getTime())) return String(ts);
+            return d.toLocaleString('ru-RU');
+        }
+
+        function maskKey(key) {
+            if (!key || key.length < 12) return key || '—';
+            return key.slice(0, 6) + '…' + key.slice(-6);
+        }
+
+        function renderKeys(list) {
+            keysListBlock.style.display = 'block';
+            if (!list || !list.length) {
+                keysList.innerHTML = '<div class="keys-empty">Ключей не найдено</div>';
+                return;
+            }
+            keysList.innerHTML = list.map(function(item, idx) {
+                const key = item.key || item.Key || '';
+                const deleted = !!(item.deleted || item.Deleted);
+                const ts = item.timestamp || item.Timestamp || item.created || '';
+                const company = item.companyId || item.CompanyId || COMPANY_ID;
+                return (
+                    '<div class="key-item' + (deleted ? ' deleted' : '') + '">' +
+                    '<div class="key-item-meta">' +
+                    '<span>#' + (idx + 1) + '</span>' +
+                    '<span>' + (deleted ? 'удалён' : 'активен') + '</span>' +
+                    '<span>' + formatTs(ts) + '</span>' +
+                    '<span title="' + company + '">company: ' + String(company).slice(0, 8) + '…</span>' +
+                    '</div>' +
+                    '<div class="key-item-key" data-full-key="' + key.replace(/"/g, '&quot;') + '">' + maskKey(key) + '</div>' +
+                    '<div class="key-item-actions">' +
+                    (key ? '<button type="button" class="copy-key-btn">Скопировать</button><button type="button" class="show-key-btn">Показать</button>' : '') +
+                    '</div></div>'
+                );
+            }).join('');
+        }
+
+        async function listKeys() {
+            hideResult();
+            if (!validateInputs()) return;
+
+            listKeysBtn.disabled = true;
+            listKeysBtn.innerText = '⏳ Загрузка...';
+
+            try {
+                // POST /auth/keys/get — список ключей по логину/паролю
+                let response = await fetch(API_BASE + '/auth/keys/get', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(authBody())
+                });
+
+                // fallback: некоторые инсталляции принимают company вместо companyId
+                if (!response.ok) {
+                    response = await fetch(API_BASE + '/auth/keys/get', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            login: loginInput.value.trim(),
+                            password: passwordInput.value.trim(),
+                            company: COMPANY_ID
+                        })
+                    });
+                }
+
+                const data = await response.json();
+                if (!response.ok) {
+                    const errorText = data.message || data.error || JSON.stringify(data);
+                    showError('Ошибка ' + response.status + ': ' + errorText);
+                    keysListBlock.style.display = 'none';
+                    return;
+                }
+
+                const list = Array.isArray(data) ? data : (data.content || data.keys || data.list || []);
+                renderKeys(list);
+            } catch (error) {
+                showError('Сетевая ошибка: ' + error.message);
+                keysListBlock.style.display = 'none';
+            } finally {
+                listKeysBtn.disabled = false;
+                listKeysBtn.innerText = 'Посмотреть созданные ключи';
+            }
+        }
+
+        copyBtn.addEventListener('click', function() {
             const key = keyDisplay.innerText;
             if (key && key !== '─── ошибка ───') {
-                navigator.clipboard.writeText(key).then(() => {
-                    // Визуальная обратная связь
+                navigator.clipboard.writeText(key).then(function() {
                     const originalText = copyBtn.innerText;
                     copyBtn.innerText = 'Скопировано!';
-                    setTimeout(() => {
-                        copyBtn.innerText = originalText;
-                    }, 1500);
-                }).catch(() => {
+                    setTimeout(function() { copyBtn.innerText = originalText; }, 1500);
+                }).catch(function() {
                     alert('Не удалось скопировать, выделите ключ вручную.');
                 });
             }
         });
 
-        // Обработчик кнопки генерации
+        keysList.addEventListener('click', function(e) {
+            const item = e.target.closest('.key-item');
+            if (!item) return;
+            const keyEl = item.querySelector('.key-item-key');
+            if (!keyEl) return;
+            const full = keyEl.getAttribute('data-full-key') || keyEl.textContent;
+            if (e.target.classList.contains('copy-key-btn')) {
+                navigator.clipboard.writeText(full).then(function() {
+                    e.target.textContent = 'Скопировано!';
+                    setTimeout(function() { e.target.textContent = 'Скопировать'; }, 1200);
+                });
+            }
+            if (e.target.classList.contains('show-key-btn')) {
+                const masked = maskKey(full);
+                if (keyEl.textContent === full) {
+                    keyEl.textContent = masked;
+                    e.target.textContent = 'Показать';
+                } else {
+                    keyEl.textContent = full;
+                    e.target.textContent = 'Скрыть';
+                }
+            }
+        });
+
         generateBtn.addEventListener('click', generateKey);
+        listKeysBtn.addEventListener('click', listKeys);
 
-        // Также можно нажать Enter в поле пароля
-        passwordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                generateKey();
-            }
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') generateKey();
         });
-        loginInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                generateKey();
-            }
+        loginInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') generateKey();
         });
 
-        // Начальное скрытие блока результата
         hideResult();
     })();
 </script>
