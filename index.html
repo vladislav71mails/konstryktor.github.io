@@ -105,7 +105,7 @@
                 <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
             </svg>
         </button>
-        <button id="image-btn" class="toolbar-btn" title="Вставить изображение">
+        <button id="image-btn" class="toolbar-btn" title="Вставить изображение из файла">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                 <circle cx="8.5" cy="8.5" r="1.5"/>
@@ -116,28 +116,35 @@
     
     <div class="toolbar-separator"></div>
     
-    <!-- Группа шрифта -->
+    <!-- Группа шрифта (современные выпадающие панели) -->
     <div class="toolbar-group">
-        <div class="toolbar-select-wrapper">
-            <select id="font-size" class="toolbar-select">
-                <option value="">Размер текста</option>
-                <option value="12px">Маленький (12px)</option>
-                <option value="16px">Обычный (16px)</option>
-                <option value="18px">Средний (18px)</option>
-                <option value="24px">Большой (24px)</option>
-                <option value="32px">Очень большой (32px)</option>
-            </select>
+        <div class="toolbar-dropdown" id="font-size-dropdown" data-dropdown="font-size">
+            <button type="button" class="toolbar-dropdown-btn" id="font-size-btn" title="Размер текста" aria-haspopup="listbox" aria-expanded="false">
+                <span class="toolbar-dropdown-value" id="font-size-label">16</span>
+                <svg class="toolbar-dropdown-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="toolbar-dropdown-panel" id="font-size-panel" role="listbox" hidden>
+                <button type="button" class="toolbar-dropdown-item" data-value="12px" role="option"><span class="fs-preview" style="font-size:12px">Маленький</span><span class="fs-meta">12px</span></button>
+                <button type="button" class="toolbar-dropdown-item is-active" data-value="16px" role="option"><span class="fs-preview" style="font-size:16px">Обычный</span><span class="fs-meta">16px</span></button>
+                <button type="button" class="toolbar-dropdown-item" data-value="18px" role="option"><span class="fs-preview" style="font-size:18px">Средний</span><span class="fs-meta">18px</span></button>
+                <button type="button" class="toolbar-dropdown-item" data-value="24px" role="option"><span class="fs-preview" style="font-size:24px">Большой</span><span class="fs-meta">24px</span></button>
+                <button type="button" class="toolbar-dropdown-item" data-value="32px" role="option"><span class="fs-preview" style="font-size:28px">Очень большой</span><span class="fs-meta">32px</span></button>
+            </div>
         </div>
-        <div class="toolbar-select-wrapper">
-            <select id="font-family" class="toolbar-select">
-                <option value="">Шрифт</option>
-                <option value="'Inter', -apple-system, sans-serif">Inter</option>
-                <option value="'Georgia', 'Times New Roman', serif">Georgia</option>
-                <option value="'Roboto Mono', 'Courier New', monospace">Roboto Mono</option>
-                <option value="'Merriweather', Georgia, serif">Merriweather</option>
-            </select>
+        <div class="toolbar-dropdown" id="font-family-dropdown" data-dropdown="font-family">
+            <button type="button" class="toolbar-dropdown-btn" id="font-family-btn" title="Шрифт" aria-haspopup="listbox" aria-expanded="false">
+                <span class="toolbar-dropdown-value" id="font-family-label">Шрифт</span>
+                <svg class="toolbar-dropdown-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="toolbar-dropdown-panel toolbar-dropdown-panel-wide" id="font-family-panel" role="listbox" hidden>
+                <button type="button" class="toolbar-dropdown-item" data-value="'Inter', -apple-system, sans-serif" role="option" style="font-family:'Inter',-apple-system,sans-serif">Inter</button>
+                <button type="button" class="toolbar-dropdown-item" data-value="'Georgia', 'Times New Roman', serif" role="option" style="font-family:Georgia,'Times New Roman',serif">Georgia</button>
+                <button type="button" class="toolbar-dropdown-item" data-value="'Roboto Mono', 'Courier New', monospace" role="option" style="font-family:'Roboto Mono','Courier New',monospace">Roboto Mono</button>
+                <button type="button" class="toolbar-dropdown-item" data-value="'Merriweather', Georgia, serif" role="option" style="font-family:Merriweather,Georgia,serif">Merriweather</button>
+            </div>
         </div>
     </div>
+    <input type="file" id="image-file-input" accept="image/*" multiple hidden aria-hidden="true">
     
     <div class="toolbar-separator"></div>
     
@@ -282,6 +289,7 @@
                 <button class="btn" id="copy-btn">Копировать в буфер</button>
                 <button class="btn btn-secondary" id="download-html-btn">Скачать .html</button>
                 <button class="btn btn-secondary" id="download-html-css-btn" title="Скачать HTML и отдельный CSS">Скачать .html + .css</button>
+                <button class="btn btn-secondary" id="download-zip-btn" title="HTML + изображения в ZIP">Скачать .zip</button>
             </div>
         </div>
     </div>
@@ -480,11 +488,27 @@
         </div>
     </div>
 
+<!-- core -->
+<script src="js/core/history.js"></script>
+<script src="js/core/autosave.js"></script>
+<script src="js/core/empty-state.js"></script>
+<!-- ui (notifications early — used everywhere) -->
+<script src="js/ui/notifications.js"></script>
+<!-- drag -->
+<script src="js/drag/block-drag.js"></script>
+<!-- blocks -->
+<script src="js/blocks/setup.js"></script>
+<script src="js/blocks/factories.js"></script>
 <script src="js/templates.js"></script>
-<script src="js/dragDrop.js"></script>
-<script src="js/converter.js"></script>
+<script src="js/drag/sidebar-drag.js"></script>
+<!-- export -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="js/export/builder.js"></script>
+<script src="js/export/converter.js"></script>
 <script src="js/editor.js"></script>
 <script src="js/integrations.js"></script>
+<!-- ui command palette (after insertTemplate / exportHTML / etc.) -->
+<script src="js/ui/command-palette.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
