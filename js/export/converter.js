@@ -330,7 +330,7 @@ class ArticleConverter {
     <div class="editable-content" contenteditable="true">
         <div class="note-container" style="background: #fffed1; border: 2px solid #ffc107; padding: 15px; margin-bottom: 15px; border-radius: 4px;">
             <div class="note-header" style="display: flex; align-items: center; margin-bottom: 10px;">
-                <div class="note-icon" style="border: 2px solid #ffc107; background: #fff9c4; color: #ffc107; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">📝</div>
+                <div class="note-icon" style="border: 2px solid #ffc107; background: #fff9c4; color: #ffc107; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">i</div>
                 <div class="note-title"><strong>Примечание</strong></div>
             </div>
             <div class="note-text">

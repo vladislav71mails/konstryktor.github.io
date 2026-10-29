@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initDragAndDrop();
     // initContentDragAndDrop removed — was undefined; drag is handled by dragDrop.js
     setupGroupOperations();
+    setupWikiModal();
     setupKeyboardShortcuts();
     setupAutosave();
     initSidebarTemplateDrag();
@@ -67,11 +68,66 @@ function initializeEditor() {
     // Привязать уже существующие free-text-block из HTML
     editor.querySelectorAll('.free-text-block').forEach(bindFreeTextBlock);
     
+    // Выделение блоков: mousedown надёжнее click (contenteditable / вложенная разметка)
+    editor.addEventListener('mousedown', function(e) {
+        // Чекбокс выделения на блоке
+        const selectCtl = e.target.closest('.block-select');
+        if (selectCtl) {
+            e.preventDefault();
+            e.stopPropagation();
+            const block = selectCtl.closest('.block');
+            if (!block) return;
+            const multi = e.ctrlKey || e.metaKey || e.shiftKey;
+            if (!multi) {
+                document.querySelectorAll('.block.selected').forEach(b => {
+                    if (b !== block) b.classList.remove('selected');
+                });
+            }
+            block.classList.toggle('selected');
+            syncBlockSelectControls();
+            return;
+        }
+
+        const block = e.target.closest('.block');
+        if (!block || !editor.contains(block)) return;
+
+        // UI кнопок / настроек / ссылок — не трогаем выделение здесь
+        if (e.target.closest('.block-actions, .settings-panel, .block-settings, button, a, input, select, textarea, .insert-macro-btn')) {
+            return;
+        }
+
+        const multi = e.ctrlKey || e.metaKey || e.shiftKey;
+        const onEditable = !!e.target.closest('[contenteditable="true"]');
+
+        if (multi) {
+            // Мультивыбор: Ctrl/Cmd/Shift + клик в любом месте блока (включая текст)
+            e.preventDefault();
+            block.classList.toggle('selected');
+            syncBlockSelectControls();
+            return;
+        }
+
+        // Обычный клик: этот блок — единственный selected (можно сразу редактировать текст)
+        document.querySelectorAll('.block.selected').forEach(b => {
+            if (b !== block) b.classList.remove('selected');
+        });
+        block.classList.add('selected');
+        syncBlockSelectControls();
+
+        if (!onEditable) {
+            document.querySelectorAll('.settings-panel').forEach(panel => {
+                panel.style.display = 'none';
+                panel.classList.remove('always-visible');
+            });
+        }
+    }, true);
+
     editor.addEventListener('click', function(e) {
         // Клик по empty-state — открыть slash или фокус
         if (e.target.closest('.editor-empty-state')) {
             if (!(e.ctrlKey || e.metaKey || e.shiftKey)) {
-                document.querySelectorAll('.block').forEach(b => b.classList.remove('selected'));
+                document.querySelectorAll('.block.selected').forEach(b => b.classList.remove('selected'));
+                syncBlockSelectControls();
             }
             openSlashMenuAt(e.clientX, e.clientY, null);
             return;
@@ -80,7 +136,8 @@ function initializeEditor() {
         // Клик по пустому месту редактора — фокус в свободный текст
         if (e.target === editor || e.target.classList.contains('drop-zone') || e.target.classList.contains('free-text-placeholder')) {
             if (!(e.ctrlKey || e.metaKey || e.shiftKey)) {
-                document.querySelectorAll('.block').forEach(b => b.classList.remove('selected'));
+                document.querySelectorAll('.block.selected').forEach(b => b.classList.remove('selected'));
+                syncBlockSelectControls();
             }
             updateEditorEmptyState();
             const free = editor.querySelector('.free-text');
@@ -91,33 +148,10 @@ function initializeEditor() {
             return;
         }
 
-        if (e.target.classList.contains('block') || e.target.closest('.block')) {
-            const block = e.target.classList.contains('block') ?
-                e.target : e.target.closest('.block');
-            const multi = e.ctrlKey || e.metaKey || e.shiftKey;
-
-            if (!multi) {
-                document.querySelectorAll('.block').forEach(b => {
-                    if (b !== block) b.classList.remove('selected');
-                });
-                document.querySelectorAll('.settings-panel').forEach(panel => {
-                    panel.style.display = 'none';
-                    panel.classList.remove('always-visible');
-                });
-                block.classList.add('selected');
-            } else {
-                // Ctrl/Cmd/Shift+клик — переключить выделение блока (мультивыбор)
-                if (e.target.closest('[contenteditable="true"]') && !e.target.closest('.drag-handle')) {
-                    // не мешаем выделению текста внутри, если клик по тексту без handle
-                    // но по самому блоку / краю — ок
-                }
-                block.classList.toggle('selected');
-            }
-            return;
-        }
-
-        if (!(e.ctrlKey || e.metaKey || e.shiftKey)) {
-            document.querySelectorAll('.block').forEach(b => b.classList.remove('selected'));
+        // Клик вне блока (но не empty) — снять выделение
+        if (!e.target.closest('.block') && !(e.ctrlKey || e.metaKey || e.shiftKey)) {
+            document.querySelectorAll('.block.selected').forEach(b => b.classList.remove('selected'));
+            syncBlockSelectControls();
             document.querySelectorAll('.settings-panel').forEach(panel => {
                 panel.style.display = 'none';
                 panel.classList.remove('always-visible');
@@ -559,7 +593,11 @@ function setupEventListeners() {
     document.querySelectorAll('.close-modal').forEach(btn => {
         btn.addEventListener('click', function() {
             const modal = this.closest('.modal');
-            if (modal) modal.classList.remove('active');
+            if (modal) {
+                modal.classList.remove('active');
+                // сбросить возможный inline display (например после старых open*)
+                modal.style.display = '';
+            }
         });
     });
     
@@ -632,11 +670,17 @@ function setupEventListeners() {
                 snapshotEditor('before-import');
                 smartImportHTML(importArea.value);
                 if (importModal) importModal.classList.remove('active');
+                const nameEl = document.getElementById('import-file-name');
+                if (nameEl) nameEl.textContent = '';
+                const fileInput = document.getElementById('import-file-input');
+                if (fileInput) fileInput.value = '';
                 markAutosaveDirty();
                 showNotification('HTML успешно импортирован! Блоки восстановлены как интерактивные.', 'success');
             }
         });
     }
+
+    setupImportFilePicker();
     
     const insertCustomHtmlBtn = document.getElementById('insert-custom-html');
     if (insertCustomHtmlBtn) {
@@ -1213,68 +1257,168 @@ function applyEditorColor(type, color, wrap) {
 }
 
 
-// Групповые операции с блоками
+// Групповые операции с блоками (кнопки в toolbar)
 function setupGroupOperations() {
-    const header = document.querySelector('.header');
-    if (!header) return;
-    
-    const groupActions = document.createElement('div');
-    groupActions.className = 'group-actions';
-    groupActions.innerHTML = `
-        <button id="select-all-btn">Выделить все</button>
-        <button id="copy-selected-btn">Копировать выделенные</button>
-        <button id="delete-selected-btn">Удалить выделенные</button>
-    `;
-    header.appendChild(groupActions);
-    
-    document.getElementById('select-all-btn').addEventListener('click', selectAllBlocks);
-    document.getElementById('copy-selected-btn').addEventListener('click', copySelectedBlocks);
-    document.getElementById('delete-selected-btn').addEventListener('click', deleteSelectedBlocks);
+    const selectAllBtn = document.getElementById('select-all-btn');
+    const copySelectedBtn = document.getElementById('copy-selected-btn');
+    const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+
+    // mousedown preventDefault — чтобы клик по кнопке не снимал выделение блоков
+    [selectAllBtn, copySelectedBtn, deleteSelectedBtn].forEach(btn => {
+        if (!btn) return;
+        btn.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+        });
+    });
+
+    if (selectAllBtn) selectAllBtn.addEventListener('click', selectAllBlocks);
+    if (copySelectedBtn) copySelectedBtn.addEventListener('click', copySelectedBlocks);
+    if (deleteSelectedBtn) deleteSelectedBtn.addEventListener('click', deleteSelectedBlocks);
+}
+
+/** Чекбокс выделения слева у блока (рядом с drag-handle) */
+function ensureBlockSelectControl(block) {
+    if (!block || block.querySelector(':scope > .block-select')) return;
+    const ctl = document.createElement('button');
+    ctl.type = 'button';
+    ctl.className = 'block-select';
+    ctl.title = 'Выделить блок (Ctrl+клик — несколько)';
+    ctl.setAttribute('aria-label', 'Выделить блок');
+    ctl.tabIndex = -1;
+    const handle = block.querySelector(':scope > .drag-handle');
+    if (handle) {
+        handle.insertAdjacentElement('afterend', ctl);
+    } else {
+        block.insertBefore(ctl, block.firstChild);
+    }
+}
+
+function syncBlockSelectControls() {
+    document.querySelectorAll('.block').forEach(block => {
+        ensureBlockSelectControl(block);
+        const ctl = block.querySelector(':scope > .block-select');
+        if (!ctl) return;
+        const on = block.classList.contains('selected');
+        ctl.classList.toggle('is-checked', on);
+        ctl.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+}
+
+/** Только top-level .block.selected (без вложенных, если такие появятся) */
+function getSelectedTopLevelBlocks() {
+    const editor = document.getElementById('editor');
+    if (!editor) return [];
+    const all = Array.from(editor.querySelectorAll('.block.selected'));
+    return all.filter(block => {
+        let p = block.parentElement;
+        while (p && p !== editor) {
+            if (p.classList && p.classList.contains('block') && p.classList.contains('selected')) {
+                return false;
+            }
+            p = p.parentElement;
+        }
+        return true;
+    });
 }
 
 function selectAllBlocks() {
-    document.querySelectorAll('.block').forEach(block => {
+    const editor = document.getElementById('editor');
+    if (!editor) return;
+    editor.querySelectorAll('.block').forEach(block => {
         block.classList.add('selected');
     });
+    syncBlockSelectControls();
     showNotification('Все блоки выделены', 'info');
 }
 
 function deselectAllBlocks() {
-    document.querySelectorAll('.block').forEach(block => {
+    document.querySelectorAll('.block.selected').forEach(block => {
         block.classList.remove('selected');
     });
+    syncBlockSelectControls();
     showNotification('Выделение снято', 'info');
 }
 
 function copySelectedBlocks() {
-    const selectedBlocks = document.querySelectorAll('.block.selected');
+    const selectedBlocks = getSelectedTopLevelBlocks();
     if (selectedBlocks.length === 0) {
         showNotification('Нет выделенных блоков', 'warning');
         return;
     }
-    
+
     selectedBlocks.forEach(block => {
         if (typeof copyBlock === 'function') {
             copyBlock(block);
         }
     });
-    
+
     showNotification(`Скопировано блоков: ${selectedBlocks.length}`, 'success');
 }
 
 function deleteSelectedBlocks() {
-    const selectedBlocks = document.querySelectorAll('.block.selected');
+    // Снимок списка ДО confirm — NodeList/массив ссылок на DOM-элементы
+    const selectedBlocks = getSelectedTopLevelBlocks();
     if (selectedBlocks.length === 0) {
         showNotification('Нет выделенных блоков', 'warning');
         return;
     }
-    
-    if (confirm(`Удалить ${selectedBlocks.length} выделенных блоков?`)) {
+
+    const count = selectedBlocks.length;
+    if (!confirm(`Удалить ${count} выделенных блоков?`)) return;
+
+    if (typeof snapshotEditor === 'function') {
         snapshotEditor('before-delete-selected');
-        selectedBlocks.forEach(block => {
+    }
+
+    // Удаляем с конца, чтобы не ломать порядок при вложенности
+    for (let i = selectedBlocks.length - 1; i >= 0; i--) {
+        const block = selectedBlocks[i];
+        if (block && block.parentNode) {
             block.remove();
+        }
+    }
+
+    if (typeof updateEditorEmptyState === 'function') {
+        updateEditorEmptyState();
+    }
+    syncBlockSelectControls();
+    showNotification(`Удалено блоков: ${count}`, 'success');
+}
+
+function setupWikiModal() {
+    const wikiBtn = document.getElementById('wiki-btn');
+    const wikiModal = document.getElementById('wiki-modal');
+    if (!wikiBtn || !wikiModal) return;
+
+    function openWiki() {
+        wikiModal.classList.add('active');
+        // display задаёт только CSS (.modal.active { display: flex }) — без inline,
+        // иначе close-modal (снимает класс) не скрывает окно
+        wikiModal.style.display = '';
+    }
+
+    function closeWiki() {
+        wikiModal.classList.remove('active');
+        wikiModal.style.display = '';
+    }
+
+    wikiBtn.addEventListener('click', openWiki);
+
+    const closeBtn = wikiModal.querySelector('.close-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeWiki();
         });
-        showNotification(`Удалено блоков: ${selectedBlocks.length}`, 'success');
+    }
+    wikiModal.addEventListener('click', function (e) {
+        if (e.target === wikiModal) closeWiki();
+    });
+
+    // Открытие из popup расширения: index.html#wiki
+    if (location.hash === '#wiki') {
+        setTimeout(openWiki, 50);
     }
 }
 
@@ -2208,6 +2352,17 @@ function setupVersionHistory() {
 function setupKeyboardShortcuts() {
     setupEditorHistory();
     setupCommandPalette();
+    setupVersionHistory();
+
+    const versionsBtn = document.getElementById('versions-btn');
+    if (versionsBtn && !versionsBtn.dataset.versionsBound) {
+        versionsBtn.dataset.versionsBound = '1';
+        versionsBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            openVersionsModal();
+        });
+    }
+
 
     document.addEventListener('keydown', function(e) {
         const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
@@ -2652,8 +2807,264 @@ function rebuildAllContentBlocks(root) {
 }
 
 /**
+ * Выбор файла для импорта HTML в модалке.
+ */
+function setupImportFilePicker() {
+    const fileBtn = document.getElementById('import-file-btn');
+    const fileInput = document.getElementById('import-file-input');
+    const importArea = document.getElementById('import-area');
+    const nameEl = document.getElementById('import-file-name');
+    if (!fileBtn || !fileInput) return;
+
+    fileBtn.addEventListener('click', function() {
+        fileInput.value = '';
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function() {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        if (nameEl) nameEl.textContent = file.name;
+
+        const reader = new FileReader();
+        reader.onload = function() {
+            const text = typeof reader.result === 'string' ? reader.result : '';
+            if (importArea) {
+                importArea.value = text;
+                importArea.focus();
+            }
+            if (typeof showNotification === 'function') {
+                showNotification('Файл «' + file.name + '» загружен. Нажмите «Импортировать».', 'success');
+            }
+        };
+        reader.onerror = function() {
+            if (typeof showNotification === 'function') {
+                showNotification('Не удалось прочитать файл', 'error');
+            }
+        };
+        reader.readAsText(file, 'UTF-8');
+    });
+}
+
+/**
+ * Из полного HTML-документа (DOCTYPE / html / head / style) достаёт только body.
+ * Скрипты и стили отбрасываются — в редактор попадает чистое содержимое статьи.
+ */
+function extractBodyFromFullHTML(htmlString) {
+    const raw = (htmlString || '').trim();
+    if (!raw) return '';
+
+    const looksLikeDocument = /<!DOCTYPE\s+html|<html[\s>]|<head[\s>]|<body[\s>]/i.test(raw);
+    if (!looksLikeDocument) {
+        return raw;
+    }
+
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(raw, 'text/html');
+        if (doc && doc.body) {
+            doc.body.querySelectorAll('script, style, link, meta, noscript').forEach(function(el) {
+                el.remove();
+            });
+            return doc.body.innerHTML.trim();
+        }
+    } catch (e) { /* fallback ниже */ }
+
+    // Fallback без DOMParser: вырезать body
+    const bodyMatch = raw.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    if (bodyMatch && bodyMatch[1]) {
+        return bodyMatch[1]
+            .replace(/<style[\s\S]*?<\/style>/gi, '')
+            .replace(/<script[\s\S]*?<\/script>/gi, '')
+            .trim();
+    }
+    return raw
+        .replace(/<!DOCTYPE[\s\S]*?>/i, '')
+        .replace(/<\/?html[^>]*>/gi, '')
+        .replace(/<head[\s\S]*?<\/head>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .trim();
+}
+
+/**
+ * Превращает «экспортный» / legacy HTML (inline-стили, warning-container, details, шаги)
+ * в элементы с content-* классами, которые потом подхватывает rebuildAllContentBlocks.
+ */
+function convertLegacyStructures(root) {
+    if (!root) return;
+
+    // --- Спойлеры: голые <details> → content-spoiler ---
+    Array.from(root.querySelectorAll('details')).forEach(function(details) {
+        if (details.closest('.content-spoiler, .block')) return;
+        const summaryEl = details.querySelector(':scope > summary');
+        const summaryText = summaryEl
+            ? summaryEl.innerHTML.replace(/^<strong>|<\/strong>$/gi, '').trim() || summaryEl.textContent.trim()
+            : 'Название спойлера';
+        const contentClone = details.cloneNode(true);
+        const sum = contentClone.querySelector('summary');
+        if (sum) sum.remove();
+        const bodyHtml = contentClone.innerHTML.trim() || 'Содержимое спойлера';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'content-spoiler';
+        wrapper.innerHTML =
+            '<details class="spoiler-container" style="margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px;">' +
+            '<summary class="spoiler-header" style="background: #f5f5f5; padding: 12px 15px; cursor: pointer; font-weight: bold;">' +
+            '<strong>' + summaryText.replace(/<[^>]*>/g, '') + '</strong></summary>' +
+            '<div class="spoiler-content" style="padding: 15px;">' + bodyHtml + '</div></details>';
+        if (details.parentNode) {
+            details.parentNode.replaceChild(wrapper, details);
+        }
+    });
+
+    // --- Предупреждения / успех / заметки по контейнерам и цветам ---
+    function wrapAlertContainer(el, contentClass, containerClass, iconChar, defaultTitle) {
+        if (el.closest('.content-warning, .content-success, .content-note, .block')) return;
+        if (el.classList.contains(contentClass)) return;
+
+        let title = defaultTitle;
+        const titleEl = el.querySelector('.warning-title, .success-title, .note-title, strong');
+        if (titleEl) title = titleEl.textContent.trim() || defaultTitle;
+
+        let textHtml = '';
+        const textEl = el.querySelector('.warning-text, .success-text, .note-text');
+        if (textEl) {
+            textHtml = textEl.innerHTML.trim();
+        } else {
+            const clone = el.cloneNode(true);
+            clone.querySelectorAll('.warning-header, .success-header, .note-header, .warning-icon, .success-icon, .note-icon').forEach(function(n) {
+                n.remove();
+            });
+            textHtml = clone.innerHTML.trim();
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = contentClass;
+        if (contentClass === 'content-warning') {
+            wrapper.innerHTML =
+                '<div class="' + containerClass + '" style="background: #ffd1d1; border: 2px solid #7a0000; padding: 15px; margin-bottom: 15px; border-radius: 4px; color: #333;">' +
+                '<div class="warning-header" style="display: flex; align-items: center; margin-bottom: 10px;">' +
+                '<div class="warning-icon" style="border: 2px solid #7a0000; background: #ffc6e3; color: #7a0000; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">' + iconChar + '</div>' +
+                '<div class="warning-title"><strong>' + title.replace(/</g, '&lt;') + '</strong></div></div>' +
+                '<div class="warning-content-area"><div class="warning-text">' + textHtml + '</div></div></div>';
+        } else if (contentClass === 'content-success') {
+            wrapper.innerHTML =
+                '<div class="' + containerClass + '" style="background: #eaf8db; border: 2px solid #2e7d32; padding: 15px; margin-bottom: 15px; border-radius: 4px;">' +
+                '<div class="success-header" style="display: flex; align-items: center; margin-bottom: 10px;">' +
+                '<div class="success-icon">' + iconChar + '</div>' +
+                '<div class="success-title"><strong>' + title.replace(/</g, '&lt;') + '</strong></div></div>' +
+                '<div class="success-text">' + textHtml + '</div></div>';
+        } else {
+            wrapper.innerHTML =
+                '<div class="' + containerClass + '" style="background: #fffed1; border: 2px solid #ffc107; padding: 15px; margin-bottom: 15px; border-radius: 4px;">' +
+                '<div class="note-header" style="display: flex; align-items: center; margin-bottom: 10px;">' +
+                '<div class="note-icon">' + iconChar + '</div>' +
+                '<div class="note-title"><strong>' + title.replace(/</g, '&lt;') + '</strong></div></div>' +
+                '<div class="note-text">' + textHtml + '</div></div>';
+        }
+        if (el.parentNode) el.parentNode.replaceChild(wrapper, el);
+    }
+
+    Array.from(root.querySelectorAll('.warning-container, [style*="#ffd1d1"], [style*="rgb(255, 209, 209)"]')).forEach(function(el) {
+        if (el.classList.contains('content-warning') || el.closest('.content-warning, .block')) return;
+        // только «корневые» блоки-предупреждения, не иконки внутри
+        if (el.querySelector('.warning-header, .warning-icon, strong') || el.classList.contains('warning-container')) {
+            wrapAlertContainer(el, 'content-warning', 'warning-container', '!', 'Важно !');
+        }
+    });
+
+    Array.from(root.querySelectorAll('.success-container, [style*="#eaf8db"]')).forEach(function(el) {
+        if (el.classList.contains('content-success') || el.closest('.content-success, .block')) return;
+        if (el.querySelector('.success-header, strong') || el.classList.contains('success-container')) {
+            wrapAlertContainer(el, 'content-success', 'success-container', '✓', 'Успешно !');
+        }
+    });
+
+    Array.from(root.querySelectorAll('.note-container, [style*="#fffed1"]')).forEach(function(el) {
+        if (el.classList.contains('content-note') || el.closest('.content-note, .block')) return;
+        if (el.querySelector('.note-header, strong') || el.classList.contains('note-container')) {
+            wrapAlertContainer(el, 'content-note', 'note-container', 'i', 'Примечание');
+        }
+    });
+
+    // --- Нумерованные шаги (фон #f8f9fa + кружок с цифрой) ---
+    Array.from(root.querySelectorAll('div')).forEach(function(el) {
+        if (el.classList.contains('content-numbered') || el.closest('.content-numbered, .block, .content-spoiler, .content-warning, .content-success, .content-note')) return;
+        const style = (el.getAttribute('style') || '').toLowerCase();
+        const bgMatch = style.includes('#f8f9fa') || style.includes('rgb(248, 249, 250)');
+        if (!bgMatch) return;
+
+        // Ищем кружок с номером
+        let number = '';
+        let title = '';
+        const kids = Array.from(el.children);
+        const headerRow = kids.find(function(c) {
+            const s = (c.getAttribute('style') || '').toLowerCase();
+            return s.includes('display') && s.includes('flex');
+        }) || kids[0];
+        if (headerRow) {
+            const circle = headerRow.querySelector('div');
+            if (circle) {
+                const t = (circle.textContent || '').trim();
+                if (/^\d+$/.test(t)) number = t;
+            }
+            const strong = headerRow.querySelector('strong');
+            if (strong) title = strong.textContent.trim();
+            else {
+                const titleDiv = headerRow.querySelector('div:last-child');
+                if (titleDiv) title = titleDiv.textContent.trim();
+            }
+        }
+        if (!number && !title) return;
+
+        // Содержимое после заголовка
+        let bodyHtml = '';
+        kids.forEach(function(c, idx) {
+            if (c === headerRow) return;
+            bodyHtml += c.outerHTML;
+        });
+        if (!bodyHtml.trim()) {
+            // текст может быть прямо в el после header
+            const clone = el.cloneNode(true);
+            if (clone.firstElementChild) clone.removeChild(clone.firstElementChild);
+            bodyHtml = clone.innerHTML.trim();
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'content-numbered';
+        wrapper.innerHTML =
+            '<div class="numbered-container" style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; margin-bottom: 15px; border-radius: 4px;">' +
+            '<div class="numbered-header" style="display: flex; align-items: center; margin-bottom: 10px;">' +
+            '<div class="numbered-number" style="background: #222; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">' +
+            (number || '1') + '</div>' +
+            '<div class="numbered-title"><strong>' + (title || 'Шаг').replace(/</g, '&lt;') + '</strong></div></div>' +
+            '<div class="numbered-content">' + (bodyHtml || '') + '</div></div>';
+        if (el.parentNode) el.parentNode.replaceChild(wrapper, el);
+    });
+
+    // --- Голые текстовые узлы верхнего уровня → <p> ---
+    Array.from(root.childNodes).forEach(function(node) {
+        if (node.nodeType === 3 && node.textContent.trim()) {
+            const p = document.createElement('p');
+            p.textContent = node.textContent.trim();
+            root.replaceChild(p, node);
+        }
+    });
+
+    // --- span с font-size как заголовки / абзацы ---
+    Array.from(root.querySelectorAll(':scope > span')).forEach(function(span) {
+        if (span.closest('.block, .content-warning, .content-numbered')) return;
+        const p = document.createElement('p');
+        p.innerHTML = span.innerHTML;
+        if (span.parentNode) span.parentNode.replaceChild(p, span);
+    });
+}
+
+/**
  * Умный импорт: восстанавливает интерактивные блоки (включая вложенные).
- * Работает как с чистым экспортом, так и с «грязным» HTML из живого редактора.
+ * Принимает фрагмент или полный HTML-документ (с DOCTYPE/head/style) —
+ * лишняя обёртка отбрасывается, legacy-разметка приводится к content-*.
  */
 function smartImportHTML(htmlString) {
     const editor = document.getElementById('editor');
@@ -2663,49 +3074,77 @@ function smartImportHTML(htmlString) {
     const initialDropZone = document.getElementById('initial-drop-zone');
     if (initialDropZone) initialDropZone.remove();
 
+    // 0. Полный документ → только body без style/script
+    const cleanedSource = extractBodyFromFullHTML(htmlString);
+
     const temp = document.createElement('div');
-    temp.innerHTML = htmlString.trim();
+    temp.innerHTML = cleanedSource;
 
     // Если уже есть полноценные .block — просто вставляем
-    if (temp.querySelector('.block') && !temp.querySelector('.content-spoiler:not(.block), .content-numbered:not(.block), .content-success:not(.block)')) {
+    if (temp.querySelector('.block') && !temp.querySelector('.content-spoiler:not(.block), .content-numbered:not(.block), .content-success:not(.block), .content-warning:not(.block), .content-note:not(.block)')) {
         editor.innerHTML = temp.innerHTML;
         reinitializeBlocks();
         editor.querySelectorAll('.free-text-block').forEach(bindFreeTextBlock);
         return;
     }
 
-    // 1. Очищаем мусор
+    // 1. Очищаем мусор редактора
     sanitizeImportedHTML(temp);
 
-    // 2. Рекурсивно восстанавливаем все content-* (включая вложенные)
+    // 2. Legacy / экспорт без .block → content-* классы
+    convertLegacyStructures(temp);
+
+    // 3. Рекурсивно восстанавливаем все content-* (включая вложенные)
     rebuildAllContentBlocks(temp);
 
-    // 3. Обрабатываем оставшиеся голые <p> как free-text
-    Array.from(temp.children).forEach(child => {
-        if (child.tagName === 'P' && !child.closest('.block')) {
-            const block = rebuildFreeTextBlock(child);
+    // 4. Обрабатываем оставшиеся голые <p> / текстовые узлы как free-text
+    Array.from(temp.children).forEach(function(child) {
+        if (child.classList && child.classList.contains('block')) return;
+        if (child.tagName === 'P' || child.tagName === 'DIV' || child.tagName === 'SPAN' ||
+            child.tagName === 'H1' || child.tagName === 'H2' || child.tagName === 'H3' ||
+            child.tagName === 'UL' || child.tagName === 'OL' || child.tagName === 'BLOCKQUOTE') {
+            if (child.closest && child.closest('.block')) return;
+            const block = rebuildFreeTextBlock(
+                child.tagName === 'P' ? child : (function() {
+                    const p = document.createElement('p');
+                    p.innerHTML = child.outerHTML || child.innerHTML || child.textContent || '';
+                    return p;
+                })()
+            );
             if (block && child.parentNode) {
                 child.parentNode.replaceChild(block, child);
             }
         }
     });
 
-    // 4. Вставляем результат
+    // 5. Вставляем результат
     editor.innerHTML = '';
     while (temp.firstChild) {
         editor.appendChild(temp.firstChild);
     }
 
-    // Если ничего не получилось — fallback
-    if (!editor.children.length && htmlString.trim()) {
-        editor.innerHTML = htmlString;
+    // Если ничего не получилось — fallback (уже без head/style)
+    if (!editor.children.length && cleanedSource.trim()) {
+        const fallback = document.createElement('div');
+        fallback.innerHTML = cleanedSource;
+        convertLegacyStructures(fallback);
+        rebuildAllContentBlocks(fallback);
+        while (fallback.firstChild) editor.appendChild(fallback.firstChild);
+        if (!editor.children.length) {
+            const p = document.createElement('p');
+            p.className = 'free-text has-content';
+            p.setAttribute('contenteditable', 'true');
+            p.innerHTML = cleanedSource;
+            const shell = rebuildFreeTextBlock(p);
+            if (shell) editor.appendChild(shell);
+        }
     }
 
     reinitializeBlocks();
     editor.querySelectorAll('.free-text-block').forEach(bindFreeTextBlock);
 
     // Включаем редактирование для free-text
-    editor.querySelectorAll('.free-text').forEach(el => {
+    editor.querySelectorAll('.free-text').forEach(function(el) {
         el.setAttribute('contenteditable', 'true');
     });
 }

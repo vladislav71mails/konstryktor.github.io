@@ -8,53 +8,70 @@
 </head>
 <body>
     <div class="header">
-        <h1>Визуальный HTML-редактор</h1>
+        <div class="header-left">
+            <button id="wiki-btn" class="header-btn wiki-btn" title="Справка по проекту (Wiki)" aria-label="Wiki">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span>Wiki</span>
+            </button>
+            <h1>Визуальный HTML-редактор</h1>
+        </div>
         <div class="header-actions">
-            <button id="undo-btn" class="header-btn" title="Отменить (Ctrl+Z)" aria-label="Отменить">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.7 2.9L3 13"/></svg>
-                <span>Отменить</span>
-            </button>
-            <button id="redo-btn" class="header-btn" title="Повторить (Ctrl+Y)" aria-label="Повторить" disabled>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.7 2.9L21 13"/></svg>
-                <span>Повторить</span>
-            </button>
-            <button id="versions-btn" class="header-btn" title="История версий" aria-label="Версии">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span>Версии</span>
-            </button>
-            <button id="restore-session-btn" class="header-btn" title="Восстановить последнюю автосохранённую сессию" aria-label="Восстановить сессию" style="display:none;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                <span>Восстановить</span>
-            </button>
-            <span id="autosave-status" class="autosave-status" title="Статус автосохранения" aria-live="polite"></span>
-            <button id="theme-toggle" class="header-btn" title="Переключить тему" aria-label="Тема">
-                <svg class="icon-theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                <span class="theme-label">Тёмная тема</span>
-            </button>
-            <button id="command-palette-btn" class="header-btn" title="Палитра команд (Alt+K)" aria-label="Команды">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M11 8v6M8 11h6"/></svg>
-                <span>Команды</span>
-            </button>
-            <button id="shortcuts-btn" class="header-btn" title="Горячие клавиши" aria-label="Клавиши">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
-                <span>Клавиши</span>
-            </button>
-            <button id="publish-btn" class="header-btn publish-btn" title="Передать материалы / YouGile" aria-label="Передать материалы">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                <span>Передать материалы</span>
-            </button>
-            <button id="export-btn" class="header-btn export-btn" title="Экспорт HTML" aria-label="Экспорт HTML">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                <span>Экспорт</span>
-            </button>
-            <button id="import-btn" class="header-btn import-btn" title="Импорт HTML" aria-label="Импорт HTML">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                <span>Импорт</span>
-            </button>
-            <button id="clear-btn" class="header-btn clear-btn" title="Очистить редактор" aria-label="Очистить">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                <span>Очистить</span>
-            </button>
+            <!-- История -->
+            <div class="header-group" role="group" aria-label="История">
+                <button id="undo-btn" class="header-btn" title="Отменить (Ctrl+Z)" aria-label="Отменить">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.7 2.9L3 13"/></svg>
+                    <span>Отменить</span>
+                </button>
+                <button id="redo-btn" class="header-btn" title="Повторить (Ctrl+Y)" aria-label="Повторить" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.7 2.9L21 13"/></svg>
+                    <span>Повторить</span>
+                </button>
+                <button id="versions-btn" class="header-btn" title="История версий" aria-label="Версии">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Версии</span>
+                </button>
+                <button id="restore-session-btn" class="header-btn" title="Восстановить последнюю автосохранённую сессию" aria-label="Восстановить сессию" style="display:none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                    <span>Восстановить</span>
+                </button>
+                <span id="autosave-status" class="autosave-status" title="Статус автосохранения" aria-live="polite"></span>
+            </div>
+            <span class="header-sep" aria-hidden="true"></span>
+            <!-- Вид и справка -->
+            <div class="header-group" role="group" aria-label="Вид и справка">
+                <button id="theme-toggle" class="header-btn" title="Переключить тему" aria-label="Тема">
+                    <svg class="icon-theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    <span class="theme-label">Тёмная тема</span>
+                </button>
+                <button id="command-palette-btn" class="header-btn" title="Палитра команд (Alt+K)" aria-label="Команды">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M11 8v6M8 11h6"/></svg>
+                    <span>Команды</span>
+                </button>
+                <button id="shortcuts-btn" class="header-btn" title="Горячие клавиши" aria-label="Клавиши">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
+                    <span>Клавиши</span>
+                </button>
+            </div>
+            <span class="header-sep" aria-hidden="true"></span>
+            <!-- Документ -->
+            <div class="header-group" role="group" aria-label="Документ">
+                <button id="import-btn" class="header-btn import-btn" title="Импорт HTML" aria-label="Импорт HTML">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span>Импорт</span>
+                </button>
+                <button id="export-btn" class="header-btn export-btn" title="Экспорт HTML" aria-label="Экспорт HTML">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Экспорт</span>
+                </button>
+                <button id="publish-btn" class="header-btn publish-btn" title="Передать материалы / YouGile" aria-label="Передать материалы">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    <span>Передать</span>
+                </button>
+                <button id="clear-btn" class="header-btn clear-btn" title="Очистить редактор" aria-label="Очистить">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <span>Очистить</span>
+                </button>
+            </div>
         </div>
     </div>
     
@@ -228,6 +245,24 @@
         <button id="h2-btn" class="toolbar-btn toolbar-heading-btn" title="Заголовок H2" data-heading="h2">H2</button>
         <button id="h3-btn" class="toolbar-btn toolbar-heading-btn" title="Заголовок H3" data-heading="h3">H3</button>
     </div>
+
+    <div class="toolbar-separator"></div>
+
+    <!-- Операции с выделенными блоками -->
+    <div class="toolbar-group group-actions" role="group" aria-label="Выделенные блоки">
+        <button type="button" id="select-all-btn" class="toolbar-btn toolbar-btn-label" title="Выделить все блоки (Ctrl+A)" aria-label="Выделить все">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span>Все</span>
+        </button>
+        <button type="button" id="copy-selected-btn" class="toolbar-btn toolbar-btn-label" title="Копировать выделенные блоки (Ctrl+D)" aria-label="Копировать выделенные">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Копировать</span>
+        </button>
+        <button type="button" id="delete-selected-btn" class="toolbar-btn toolbar-btn-label toolbar-btn-danger" title="Удалить выделенные блоки (Delete)" aria-label="Удалить выделенные">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span>Удалить</span>
+        </button>
+    </div>
 </div>
     
     <div class="container">
@@ -291,7 +326,15 @@
                 <h2>Импорт HTML</h2>
                 <button class="close-modal">&times;</button>
             </div>
-            <textarea class="export-area" id="import-area" placeholder="Вставьте HTML код здесь..."></textarea>
+            <p class="import-hint" style="margin: 0 0 12px; color: var(--text-muted, #666); font-size: 0.9em;">
+                Вставьте HTML или загрузите файл (.html / .htm). Полный документ (DOCTYPE, &lt;head&gt;, стили) будет очищен — в редактор попадёт только содержимое статьи в виде блоков.
+            </p>
+            <div class="import-file-row" style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
+                <input type="file" id="import-file-input" accept=".html,.htm,text/html,text/plain" hidden>
+                <button type="button" class="btn btn-secondary" id="import-file-btn">Выбрать файл…</button>
+                <span id="import-file-name" style="font-size: 0.9em; color: var(--text-muted, #666);"></span>
+            </div>
+            <textarea class="export-area" id="import-area" placeholder="Вставьте HTML код здесь или загрузите файл…"></textarea>
             <button class="btn" id="import-confirm-btn">Импортировать</button>
         </div>
     </div>
@@ -478,6 +521,47 @@
         </div>
     </div>
 
+    <div class="modal" id="wiki-modal">
+        <div class="modal-content wiki-modal-content">
+            <div class="modal-header">
+                <h2>Wiki — Konstryktor</h2>
+                <button type="button" class="close-modal" aria-label="Закрыть">&times;</button>
+            </div>
+            <div class="wiki-body">
+                <section>
+                    <h3>Что это</h3>
+                    <p>Блочный визуальный HTML-редактор для инструкций и статей (в т.ч. по 1С): спойлеры, предупреждения, шаги, код, таблицы, изображения, ZIP-экспорт и импорт HTML.</p>
+                </section>
+                <section>
+                    <h3>Быстрый старт</h3>
+                    <ul>
+                        <li>Перетащите блок из левой панели или нажмите <kbd>/</kbd> в редакторе.</li>
+                        <li>Клик по блоку — выделить; чекбокс слева у блока или <kbd>Ctrl</kbd>+клик — несколько; в toolbar: Все / Копировать / Удалить.</li>
+                        <li><kbd>Ctrl+A</kbd> — все блоки; <kbd>Delete</kbd> — удалить выделенные.</li>
+                        <li><strong>Экспорт</strong> — HTML / HTML+CSS / ZIP с картинками. <strong>Импорт</strong> — файл или вставка кода.</li>
+                        <li><kbd>Alt+K</kbd> — палитра команд; <kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd> — отмена / повтор.</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>Кнопки шапки и toolbar</h3>
+                    <ul>
+                        <li><strong>Шапка · История</strong> — Отменить, Повторить, Версии, Восстановить сессию.</li>
+                        <li><strong>Шапка · Вид</strong> — Тема, Команды, Клавиши.</li>
+                        <li><strong>Шапка · Документ</strong> — Импорт, Экспорт, Передать (YouGile/почта), Очистить.</li>
+                        <li><strong>Toolbar</strong> — форматирование текста и операции с выделенными блоками (Все / Копировать / Удалить).</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>Экспорт и импорт</h3>
+                    <p>Экспорт отдаёт чистую разметку без UI редактора. Можно экспортировать только выделенные блоки. ZIP кладёт картинки в <code>images/</code> с относительными путями.</p>
+                    <p>Импорт принимает полный HTML-документ или фрагмент: body извлекается, legacy-структуры (details, warning, шаги) превращаются в блоки редактора.</p>
+                </section>
+                <section>
+                </section>
+            </div>
+        </div>
+    </div>
+
 <!-- core -->
 <script src="js/core/history.js"></script>
 <script src="js/core/autosave.js"></script>
@@ -492,7 +576,7 @@
 <script src="js/templates.js"></script>
 <script src="js/drag/sidebar-drag.js"></script>
 <!-- export -->
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="lib/jszip.min.js"></script>
 <script src="js/export/builder.js"></script>
 <script src="js/export/converter.js"></script>
 <script src="js/editor.js"></script>

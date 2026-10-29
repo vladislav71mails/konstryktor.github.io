@@ -1,8 +1,71 @@
+/**
+ * Плейсхолдеры contenteditable как у input: серый текст через data-placeholder,
+ * пропадает при вводе (класс has-content). Не нужно стирать пример вручную.
+ */
+function isPlaceholderEmpty(el) {
+    if (!el) return true;
+    const t = (el.textContent || '').replace(/\u00a0/g, ' ').trim();
+    if (t === '') return true;
+    const ph = el.getAttribute('data-placeholder');
+    if (ph && t === ph.trim()) return true;
+    return false;
+}
+
+function syncPlaceholderState(el) {
+    if (!el || !el.hasAttribute('data-placeholder')) return;
+    if (isPlaceholderEmpty(el)) {
+        el.classList.remove('has-content');
+        // держим пустым, чтобы ::before показал data-placeholder
+        if ((el.textContent || '').trim() !== '') {
+            el.innerHTML = '';
+        }
+    } else {
+        el.classList.add('has-content');
+    }
+}
+
+function bindContentPlaceholders(root) {
+    if (!root) return;
+    const nodes = root.querySelectorAll
+        ? root.querySelectorAll('[contenteditable="true"][data-placeholder]')
+        : [];
+    const list = root.matches && root.matches('[contenteditable="true"][data-placeholder]')
+        ? [root, ...nodes]
+        : [...nodes];
+    list.forEach(el => {
+        if (el.dataset.phBound === '1') {
+            syncPlaceholderState(el);
+            return;
+        }
+        el.dataset.phBound = '1';
+        syncPlaceholderState(el);
+        el.addEventListener('focus', function() {
+            if (isPlaceholderEmpty(this)) {
+                this.classList.remove('has-content');
+                // убрать совпадающий с плейсхолдером текст (старые шаблоны)
+                if ((this.textContent || '').trim() === (this.getAttribute('data-placeholder') || '').trim()) {
+                    this.innerHTML = '';
+                }
+            }
+        });
+        el.addEventListener('input', function() {
+            syncPlaceholderState(this);
+        });
+        el.addEventListener('blur', function() {
+            syncPlaceholderState(this);
+        });
+    });
+}
+
 // Добавление обработчиков событий для блока
 function addBlockEventListeners(block) {
     // Нативный HTML5 drag мешает выделению текста — используем только ручку
     block.setAttribute('draggable', 'false');
     block.querySelectorAll('.edit-block').forEach(btn => btn.remove());
+    bindContentPlaceholders(block);
+    if (typeof ensureBlockSelectControl === 'function') {
+        ensureBlockSelectControl(block);
+    }
 
     // Кнопка удаления
     const deleteBtn = block.querySelector('.delete-block');
@@ -399,7 +462,7 @@ function enableSafeEditing(editableContent) {
     
     // Не навешиваем protection-overlay — редактирование свободное
     // Только UI-хром внутри блока не должен быть contenteditable
-    editableContent.querySelectorAll('.drag-handle, .block-actions, .block-settings, .settings-panel, .protection-overlay').forEach(el => {
+    editableContent.querySelectorAll('.drag-handle, .block-select, .block-actions, .block-settings, .settings-panel, .protection-overlay').forEach(el => {
         if (el.classList.contains('protection-overlay')) {
             el.remove();
             return;
@@ -500,12 +563,43 @@ function copyBlock(originalBlock) {
     showNotification('Блок скопирован', 'success');
 }
 
-// НОВАЯ ФУНКЦИЯ: Загрузка текущих цветов в панель при открытии
+// Конвертация rgb/rgba/hex → #rrggbb (для color inputs)
+function colorToHex(color, fallback) {
+    fallback = fallback || '#333333';
+    if (!color || color === 'transparent' || color === 'inherit' || color === 'initial') return fallback;
+    if (color.indexOf('var(') !== -1) return fallback;
+    const hexMatch = color.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+    if (hexMatch) {
+        let h = hexMatch[1];
+        if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        return '#' + h.toLowerCase();
+    }
+    const match = color.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (!match) return fallback;
+    return '#' + [match[1], match[2], match[3]].map(function(x) {
+        const hex = parseInt(x, 10).toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+    }).join('');
+}
+
+function relativeLuminance(hex) {
+    if (!hex || hex[0] !== '#' || (hex.length !== 7 && hex.length !== 4)) return 0.5;
+    let h = hex.slice(1);
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    const r = parseInt(h.slice(0, 2), 16) / 255;
+    const g = parseInt(h.slice(2, 4), 16) / 255;
+    const b = parseInt(h.slice(4, 6), 16) / 255;
+    const lin = function(c) { return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+// Загрузка текущих цветов в панель при открытии.
+// Важно: экспорт всегда «светлый», поэтому светлый текст из dark-theme
+// не должен попадать в color input и затем запекаться в inline style.
 function loadCurrentColorsToPanel(block) {
     const settingsPanel = block.querySelector('.settings-panel');
     if (!settingsPanel) return;
 
-    // Находим контейнер, к которому применяются стили (основной макрос)
     const contentContainer = block.querySelector('.editable-content > div') ||
                              block.querySelector('.editable-content') ||
                              block.querySelector('[class*="container"], [class*="content-"] > div');
@@ -516,26 +610,45 @@ function loadCurrentColorsToPanel(block) {
 
     if (!contentContainer) return;
 
-    // Получаем текущие inline-стили (или вычисленные, если inline нет)
+    const blockType = Array.from(block.classList).find(function(cls) { return cls.startsWith('content-'); });
+    const defaults = (typeof getTemplateColors === 'function' && blockType)
+        ? getTemplateColors(blockType)
+        : { bgColor: '#ffffff', textColor: '#333333', borderColor: '#cccccc' };
+
     const computed = window.getComputedStyle(contentContainer);
-    const currentBg = contentContainer.style.backgroundColor || computed.backgroundColor;
-    const currentText = contentContainer.style.color || computed.color;
-    const currentBorder = contentContainer.style.borderColor || computed.borderColor;
+    // Предпочитаем inline (пользователь уже менял), иначе computed
+    const hasInlineBg = !!(contentContainer.style.backgroundColor || contentContainer.style.background);
+    const hasInlineText = !!contentContainer.style.color;
+    const hasInlineBorder = !!contentContainer.style.borderColor;
 
-    // Конвертируем rgb в hex, если нужно
-    function rgbToHex(rgb) {
-        if (!rgb || rgb === 'transparent' || rgb.includes('var')) return '#ffffff';
-        const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
-        if (!match) return '#ffffff';
-        return "#" + [match[1], match[2], match[3]].map(x => {
-            const hex = parseInt(x).toString(16);
-            return hex.length === 1 ? "0" + hex : hex;
-        }).join('');
+    let bgHex = colorToHex(
+        hasInlineBg ? (contentContainer.style.backgroundColor || computed.backgroundColor) : computed.backgroundColor,
+        defaults.bgColor
+    );
+    let textHex = colorToHex(
+        hasInlineText ? contentContainer.style.color : computed.color,
+        defaults.textColor
+    );
+    let borderHex = colorToHex(
+        hasInlineBorder ? contentContainer.style.borderColor : computed.borderColor,
+        defaults.borderColor
+    );
+
+    // Если текст слишком светлый (из dark-theme), а фон светлый — подставляем цвет макета
+    const bgLum = relativeLuminance(bgHex);
+    const textLum = relativeLuminance(textHex);
+    if (textLum > 0.6 && bgLum > 0.55) {
+        textHex = defaults.textColor || '#333333';
     }
+    // В dark-theme без inline: берём светлые (экспортные) дефолты макета
+    const isDark = document.body.classList.contains('dark-theme');
+    if (isDark && !hasInlineBg) bgHex = defaults.bgColor;
+    if (isDark && !hasInlineText) textHex = defaults.textColor;
+    if (isDark && !hasInlineBorder) borderHex = defaults.borderColor;
 
-    if (bgInput) bgInput.value = rgbToHex(currentBg);
-    if (textInput) textInput.value = rgbToHex(currentText);
-    if (borderInput) borderInput.value = rgbToHex(currentBorder || '#cccccc');
+    if (bgInput) bgInput.value = bgHex;
+    if (textInput) textInput.value = textHex;
+    if (borderInput) borderInput.value = borderHex;
 }
 
 // Live-обновление настроек
@@ -973,14 +1086,12 @@ function apply1CSettings(block, settingsPanel, contentDiv) {
         details.className = 'config-details';
         details.style.cssText = `margin-bottom: 12px; border: 1px solid ${border}; border-radius: 6px; overflow: hidden;`;
         details.innerHTML = `
-            <summary class="config-summary" contenteditable="true" style="background: ${sBg}; padding: 10px 14px; cursor: pointer; font-weight: bold; color: ${sFg}; list-style: none;">Новая конфигурация</summary>
-            <div class="config-content" contenteditable="true" style="padding: 14px; background: #ffffff; color: ${textColor}; min-height: 40px;">
-                Текст настройки…
-                <div class="nested-editor" contenteditable="true" style="min-height: 24px; margin-top: 8px;"></div>
-            </div>
+            <summary class="config-summary" contenteditable="true" data-placeholder="Вариант" style="background: ${sBg}; padding: 10px 14px; cursor: pointer; font-weight: bold; color: ${sFg}; list-style: none;"></summary>
+            <div class="config-content" contenteditable="true" data-placeholder="Описание варианта…" style="padding: 14px; background: #ffffff; color: ${textColor}; min-height: 40px;"></div>
         `;
         sectionsWrap.appendChild(details);
         sections.push(details);
+        bindContentPlaceholders(details);
     }
     while (sections.length > count) {
         const last = sections.pop();
@@ -1343,62 +1454,28 @@ function setupFaqSettings(block, settingsPanel) {
             const item = document.createElement('details');
             item.className = 'faq-item';
             item.innerHTML = `
-                <summary class="faq-question" contenteditable="true">Вопрос ${n}?</summary>
-                <div class="faq-answer" contenteditable="true">Ответ на вопрос ${n}.</div>
+                <summary class="faq-question" contenteditable="true" data-placeholder="Вопрос ${n}?"></summary>
+                <div class="faq-answer" contenteditable="true" data-placeholder="Ответ на вопрос…"></div>
             `;
             list.appendChild(item);
+            bindContentPlaceholders(item);
             showNotification('Вопрос добавлен', 'success');
         });
     }
 }
 
-// Убираем ВСЕ обработчики mouseleave из setupBlockPanels
+// Видимость .block-actions / .block-settings — только через CSS
+// (.block:hover .block-actions, .block.selected .block-actions).
+// Inline display:none ломал hover и заставлял кнопки «пропадать».
 function setupBlockPanels(block) {
     const blockSettings = block.querySelector('.block-settings');
     const blockActions = block.querySelector('.block-actions');
-    
-    // Только для block-settings оставляем базовую логику
-    if (blockSettings) {
-        blockSettings.addEventListener('mouseenter', function() {
-            this.style.display = 'flex';
-        });
-    }
-    
-    // Для block-actions оставляем обычную логику
     if (blockActions) {
-        blockActions.addEventListener('mouseenter', function() {
-            this.style.display = 'flex';
-        });
-        
-        blockActions.addEventListener('mouseleave', function(e) {
-            setTimeout(() => {
-                if (!this.matches(':hover')) {
-                    this.style.display = 'none';
-                }
-            }, 500);
-        });
+        blockActions.style.removeProperty('display');
     }
-    
-    block.addEventListener('mouseenter', function() {
-        const blockSettings = this.querySelector('.block-settings');
-        const blockActions = this.querySelector('.block-actions');
-        
-        if (blockSettings) blockSettings.style.display = 'flex';
-        if (blockActions) blockActions.style.display = 'flex';
-    });
-    
-    block.addEventListener('mouseleave', function(e) {
-        const relatedTarget = e.relatedTarget;
-        const blockActions = this.querySelector('.block-actions');
-        
-        if (blockActions && !blockActions.contains(relatedTarget)) {
-            setTimeout(() => {
-                if (!blockActions.matches(':hover')) {
-                    blockActions.style.display = 'none';
-                }
-            }, 500);
-        }
-    });
+    if (blockSettings) {
+        blockSettings.style.removeProperty('display');
+    }
 }
 
 // Уведомления

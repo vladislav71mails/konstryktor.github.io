@@ -64,7 +64,7 @@ function getCleanHTMLFromClone(contentClone) {
     });
 
     contentClone.querySelectorAll(
-        '.drag-handle, .block-actions, .block-settings, .settings-panel, .nested-editor, .insert-macro-btn, .drop-zone, .protection-overlay, .table-toolbar, .image-upload-btn, .image-upload-hint, .image-block-file-input, .image-resize-handle, .image-resize-size-label'
+        '.drag-handle, .block-select, .block-actions, .block-settings, .settings-panel, .nested-editor, .insert-macro-btn, .drop-zone, .protection-overlay, .table-toolbar, .image-upload-btn, .image-upload-hint, .image-block-file-input, .image-resize-handle, .image-resize-size-label'
     ).forEach(el => el.remove());
 
     // Разворачиваем image-upload-zone / image-resize-wrap
@@ -116,6 +116,26 @@ function getCleanHTMLFromClone(contentClone) {
         el.removeAttribute('draggable');
         el.removeAttribute('data-locked');
         el.removeAttribute('data-placeholder');
+    });
+
+    // Editor-only data attributes
+    contentClone.querySelectorAll('[data-original-display], [data-nested-drag-bound]').forEach(el => {
+        el.removeAttribute('data-original-display');
+        el.removeAttribute('data-nested-drag-bound');
+    });
+
+    // Убрать editor-only inline стили (cursor/user-select), сохранить display/color/background
+    contentClone.querySelectorAll('[style]').forEach(function(el) {
+        let style = el.getAttribute('style') || '';
+        style = style
+            .replace(/(?:^|;)\s*cursor\s*:\s*[^;]+/gi, '')
+            .replace(/(?:^|;)\s*user-select\s*:\s*[^;]+/gi, '')
+            .replace(/(?:^|;)\s*-webkit-user-select\s*:\s*[^;]+/gi, '')
+            .replace(/^;\s*|;$/g, '')
+            .replace(/;;+/g, ';')
+            .trim();
+        if (style) el.setAttribute('style', style);
+        else el.removeAttribute('style');
     });
 
     contentClone.querySelectorAll('.block').forEach(el => {
@@ -402,38 +422,144 @@ function exportHTML() {
     showNotification('Экспорт готов. Можно скопировать или скачать файл.', 'success');
 }
 
-// Конвертирует CSS переменные в реальные значения (ИСПРАВЛЕННАЯ: расширенный список, параметр theme)
-function convertCssVarsToValues(element, theme = 'light') {
-    const stylesToConvert = [
-        { var: 'var(--primary-color)', light: '#337ab7', dark: '#4a90e2' },
-        { var: 'var(--primary-hover)', light: '#2a6ba0', dark: '#3a7cc2' },
-        { var: 'var(--secondary-color)', light: '#f5f5f5', dark: '#2d2d2d' },
-        { var: 'var(--border-color)', light: '#ccc', dark: '#444' },
-        { var: 'var(--success-color)', light: '#eaf8db', dark: '#2d4a2d' },
-        { var: 'var(--warning-color)', light: '#fffed1', dark: '#4a4a2d' },
-        { var: 'var(--danger-color)', light: '#ffd1d1', dark: '#4a2d2d' },
-        { var: 'var(--text-color)', light: '#333', dark: '#e0e0e0' },
-        { var: 'var(--bg-color)', light: '#fff', dark: '#1e1e1e' },
-        { var: 'var(--border-radius)', light: '4px', dark: '4px' },
-        { var: 'var(--border-radius-lg)', light: '8px', dark: '8px' },
-        { var: 'var(--spacing-xs)', light: '5px', dark: '5px' },
-        { var: 'var(--spacing-sm)', light: '10px', dark: '10px' },
-        { var: 'var(--spacing-md)', light: '15px', dark: '15px' },
-        { var: 'var(--spacing-lg)', light: '20px', dark: '20px' }
-        // Добавьте больше, если нужно
-    ];
-    
-    element.querySelectorAll('[style]').forEach(el => {
+// Конвертирует CSS переменные (включая var(--x, fallback)) в реальные значения.
+// Экспорт всегда ориентирован на светлую тему чтения.
+function convertCssVarsToValues(element, theme) {
+    theme = theme || 'light';
+    const isLight = theme === 'light';
+    const map = {
+        '--primary-color': { light: '#337ab7', dark: '#4a90e2' },
+        '--primary-hover': { light: '#2a6ba0', dark: '#3a7cc2' },
+        '--secondary-color': { light: '#f5f5f5', dark: '#2d2d2d' },
+        '--border-color': { light: '#ccc', dark: '#444' },
+        '--success-color': { light: '#eaf8db', dark: '#2d4a2d' },
+        '--warning-color': { light: '#fffed1', dark: '#4a4a2d' },
+        '--danger-color': { light: '#ffd1d1', dark: '#4a2d2d' },
+        '--text-color': { light: '#333333', dark: '#e0e0e0' },
+        '--bg-color': { light: '#ffffff', dark: '#1e1e1e' },
+        '--border-radius': { light: '4px', dark: '4px' },
+        '--border-radius-lg': { light: '8px', dark: '8px' },
+        '--spacing-xs': { light: '5px', dark: '5px' },
+        '--spacing-sm': { light: '10px', dark: '10px' },
+        '--spacing-md': { light: '15px', dark: '15px' },
+        '--spacing-lg': { light: '20px', dark: '20px' },
+        '--tpl-spoiler-bg': { light: '#f5f5f5', dark: '#2c2c2c' },
+        '--tpl-spoiler-border': { light: '#ccc', dark: '#555' },
+        '--tpl-warning-bg': { light: '#ffd1d1', dark: '#3d2222' },
+        '--tpl-warning-border': { light: '#7a0000', dark: '#e57373' },
+        '--tpl-warning-icon-bg': { light: '#ffc6e3', dark: '#5c2a2a' },
+        '--tpl-warning-text': { light: '#7a0000', dark: '#ffab91' },
+        '--tpl-success-bg': { light: '#eaf8db', dark: '#1e3320' },
+        '--tpl-success-border': { light: '#2e7d32', dark: '#81c784' },
+        '--tpl-success-icon-bg': { light: '#c8e6c9', dark: '#2a4a2e' },
+        '--tpl-success-text': { light: '#2e7d32', dark: '#a5d6a7' },
+        '--tpl-note-bg': { light: '#fffed1', dark: '#3d3520' },
+        '--tpl-note-border': { light: '#ffc107', dark: '#ffd54f' },
+        '--tpl-note-icon-bg': { light: '#fff9c4', dark: '#4a4028' },
+        '--tpl-note-text': { light: '#8a6d00', dark: '#ffe082' },
+        '--tpl-numbered-bg': { light: '#f8f9fa', dark: '#2a2a2a' },
+        '--tpl-numbered-border': { light: '#e9ecef', dark: '#444' },
+        '--tpl-numbered-circle-bg': { light: '#222222', dark: '#e0e0e0' },
+        '--tpl-numbered-circle-text': { light: '#ffffff', dark: '#1a1a1a' },
+        '--tpl-code-bg': { light: '#f8f8f8', dark: '#1a1a1a' },
+        '--tpl-code-border': { light: '#ddd', dark: '#444' },
+        '--tpl-code-text': { light: '#1e1e1e', dark: '#e0e0e0' },
+        '--tpl-image-bg': { light: '#f8f9fa', dark: '#2a2a2a' },
+        '--tpl-image-border': { light: '#e9ecef', dark: '#444' },
+        '--tpl-image-caption': { light: '#666666', dark: '#aaaaaa' },
+        '--tpl-quote-bg': { light: '#f0f8ff', dark: '#1e2a38' },
+        '--tpl-quote-border': { light: '#4a90e2', dark: '#4a90e2' },
+        '--tpl-quote-text': { light: '#2c3e50', dark: '#d0d8e0' },
+        '--tpl-quote-author': { light: '#7f8c8d', dark: '#9aa8b5' },
+        '--tpl-glossary-bg': { light: '#e8f4fd', dark: '#1a2a38' },
+        '--tpl-glossary-border': { light: '#2196F3', dark: '#42a5f5' },
+        '--tpl-glossary-text': { light: '#1a1a1a', dark: '#e0e8f0' },
+        '--tpl-comparison-bg': { light: '#f8f9fa', dark: '#2a2a2a' },
+        '--tpl-devnote-bg': { light: '#fff3cd', dark: '#3d3520' },
+        '--tpl-devnote-border': { light: '#ffeaa7', dark: '#c9a227' },
+        '--tpl-devnote-text': { light: '#5c4a00', dark: '#ffe082' },
+        '--tpl-1c-bg': { light: '#FFFBEA', dark: '#2e2a1a' },
+        '--tpl-1c-border': { light: '#E0C200', dark: '#c9a227' },
+        '--tpl-1c-content-bg': { light: '#ffffff', dark: '#1e1e1e' },
+        '--tpl-1c-text': { light: '#1A1A1A', dark: '#f0e6c8' }
+    };
+
+    // var(--name) или var(--name, fallback) → значение темы
+    const varRe = /var\(\s*(--[a-zA-Z0-9-]+)\s*(?:,\s*[^)]+)?\s*\)/g;
+
+    element.querySelectorAll('[style]').forEach(function(el) {
         let style = el.getAttribute('style') || '';
-        stylesToConvert.forEach(styleVar => {
-            const replacement = theme === 'light' ? styleVar.light : styleVar.dark;
-            style = style.replace(new RegExp(styleVar.var.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g'), replacement);
+        style = style.replace(varRe, function(full, name) {
+            const entry = map[name];
+            if (!entry) return full;
+            return isLight ? entry.light : entry.dark;
         });
+        // Убрать editor-only атрибуты из style-строки не нужно; display:none от show-* оставляем
         if (style.trim()) {
             el.setAttribute('style', style);
         } else {
             el.removeAttribute('style');
         }
+    });
+
+    // Защита: светлый текст на светлом фоне (после смены вида в dark-theme)
+    if (isLight) {
+        fixLightTextOnLightBg(element);
+    }
+}
+
+function parseHexFromStyleColor(value) {
+    if (!value) return null;
+    value = String(value).trim();
+    let m = value.match(/#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b/);
+    if (m) {
+        let h = m[1];
+        if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        return '#' + h.toLowerCase();
+    }
+    m = value.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (m) {
+        return '#' + [m[1], m[2], m[3]].map(function(x) {
+            const hx = parseInt(x, 10).toString(16);
+            return hx.length === 1 ? '0' + hx : hx;
+        }).join('');
+    }
+    return null;
+}
+
+function hexLuminance(hex) {
+    if (!hex || hex.length < 7) return 0.5;
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const lin = function(c) { return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function fixLightTextOnLightBg(root) {
+    root.querySelectorAll('[style*="color"]').forEach(function(el) {
+        const style = el.getAttribute('style') || '';
+        const colorMatch = style.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
+        if (!colorMatch) return;
+        const textHex = parseHexFromStyleColor(colorMatch[1]);
+        if (!textHex) return;
+        if (hexLuminance(textHex) < 0.55) return; // уже тёмный
+
+        let bgHex = null;
+        let node = el;
+        while (node && node !== root.parentElement) {
+            const st = (node.getAttribute && node.getAttribute('style')) || '';
+            const bgM = st.match(/(?:^|;)\s*background(?:-color)?\s*:\s*([^;]+)/i);
+            if (bgM) {
+                bgHex = parseHexFromStyleColor(bgM[1]);
+                if (bgHex) break;
+            }
+            node = node.parentElement;
+        }
+        if (!bgHex || hexLuminance(bgHex) < 0.55) return; // фон тёмный — светлый текст ок
+
+        // Светлый текст на светлом фоне → тёмный
+        el.style.color = '#333333';
     });
 }
 

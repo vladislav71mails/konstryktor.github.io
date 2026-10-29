@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Konstryktor</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 300px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .brand img {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+    }
+    .brand h1 {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .brand p {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--accent);
+      color: #fff;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn-secondary {
+      margin-top: 8px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      font-weight: 500;
+    }
+    .btn-secondary:hover {
+      background: var(--card);
+      color: var(--text);
+    }
+    .hint {
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="brand">
+    <img src="icons/icon48.png" alt="">
+    <div>
+      <h1>Konstryktor</h1>
+      <p>Визуальный HTML-редактор</p>
+    </div>
+  </div>
+  <button type="button" class="btn" id="open-editor">Открыть редактор</button>
+  <button type="button" class="btn btn-secondary" id="open-wiki">Справка (Wiki)</button>
+  <p class="hint">Редактор открывается во вкладке расширения. Данные хранятся локально в браузере.</p>
+  <script src="popup.js"></script>
+</body>
+</html>

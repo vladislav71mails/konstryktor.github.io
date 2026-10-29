@@ -153,6 +153,24 @@ function setupEditorHistory() {
         editorHistory.lastSnapshotHtml = editor.innerHTML;
     }
     updateHistoryButtons();
+
+    // Кнопки шапки (клавиатура — отдельно в setupKeyboardShortcuts)
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    if (undoBtn && !undoBtn.dataset.historyBound) {
+        undoBtn.dataset.historyBound = '1';
+        undoBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            undoEditor();
+        });
+    }
+    if (redoBtn && !redoBtn.dataset.historyBound) {
+        redoBtn.dataset.historyBound = '1';
+        redoBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            redoEditor();
+        });
+    }
 }
 
 // Экспорт в глобальную область (переходный период до ES modules)

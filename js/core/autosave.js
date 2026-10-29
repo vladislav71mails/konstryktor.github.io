@@ -1,187 +1,165 @@
 /**
- * core/autosave.js — Автосохранение сессии в localStorage
- * Зависит от: editorHistory, snapshotEditor, reinitEditorAfterHistory (history),
- *             showNotification (ui), markVersionDirty / tryAutoVersionSnapshot / setupVersionHistory / openVersionsModal (versions — пока в main)
+ * core/autosave.js — быстрое автосохранение сессии (localStorage)
+ * Зависит от: showNotification (опционально)
+ * API: setupAutosave, markAutosaveDirty, restoreAutosaveSession, clearAutosaveSession
  */
+(function () {
+    const SESSION_KEY = 'konstructor_editor_session_v1';
+    const DEBOUNCE_MS = 1200;
+    let dirty = false;
+    let timer = null;
+    let lastSavedHtml = null;
 
-const AUTOSAVE_KEY = 'konstructor_editor_autosave_v1';
-const AUTOSAVE_INTERVAL_MS = 7000;
-
-let _autosaveTimer = null;
-let _lastAutosavedHtml = null;
-let _autosaveDirty = false;
-
-function markAutosaveDirty() {
-    _autosaveDirty = true;
-    if (typeof markVersionDirty === 'function') markVersionDirty();
-}
-
-function getEditorHtmlForSave() {
-    const editor = document.getElementById('editor');
-    return editor ? editor.innerHTML : '';
-}
-
-function isEditorEffectivelyEmpty(html) {
-    if (!html || !html.trim()) return true;
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    const text = (tmp.textContent || '').replace(/\u00a0/g, ' ').trim();
-    const blocks = tmp.querySelectorAll('.block');
-    // Один пустой free-text-блок считаем пустым
-    if (blocks.length <= 1 && text === '') return true;
-    return false;
-}
-
-function saveAutosaveNow(force) {
-    const html = getEditorHtmlForSave();
-    if (!force && html === _lastAutosavedHtml) {
-        _autosaveDirty = false;
-        return false;
-    }
-    // Не затираем хорошую сессию пустым редактором
-    if (!force && isEditorEffectivelyEmpty(html)) {
-        _autosaveDirty = false;
-        setAutosaveStatus('');
-        return false;
-    }
-    try {
-        const payload = {
-            html: html,
-            savedAt: Date.now(),
-            version: 1
-        };
-        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(payload));
-        _lastAutosavedHtml = html;
-        _autosaveDirty = false;
-        const t = new Date(payload.savedAt);
-        const timeStr = t.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        setAutosaveStatus('Сохранено ' + timeStr);
-        updateRestoreButtonVisibility();
-        return true;
-    } catch (e) {
-        setAutosaveStatus('Ошибка сохранения');
-        console.warn('Autosave failed', e);
-        return false;
-    }
-}
-
-function loadAutosavePayload() {
-    try {
-        const raw = localStorage.getItem(AUTOSAVE_KEY);
-        if (!raw) return null;
-        const data = JSON.parse(raw);
-        if (!data || typeof data.html !== 'string') return null;
-        return data;
-    } catch (e) {
-        return null;
-    }
-}
-
-function setAutosaveStatus(text) {
-    const el = document.getElementById('autosave-status');
-    if (el) el.textContent = text || '';
-}
-
-function updateRestoreButtonVisibility() {
-    const btn = document.getElementById('restore-session-btn');
-    if (!btn) return;
-    const data = loadAutosavePayload();
-    if (data && data.html && !isEditorEffectivelyEmpty(data.html)) {
-        btn.style.display = '';
-        const t = data.savedAt ? new Date(data.savedAt) : null;
-        const tip = t
-            ? 'Восстановить сессию от ' + t.toLocaleString('ru-RU')
-            : 'Восстановить последнюю автосохранённую сессию';
-        btn.title = tip;
-    } else {
-        btn.style.display = 'none';
-    }
-}
-
-function restoreLastSession() {
-    const data = loadAutosavePayload();
-    if (!data || !data.html) {
-        showNotification('Нет сохранённой сессии', 'warning');
-        return;
-    }
-    const editor = document.getElementById('editor');
-    if (!editor) return;
-
-    if (!confirm('Восстановить последнюю автосохранённую сессию? Текущее содержимое будет заменено.')) {
-        return;
+    function getEditor() {
+        return document.getElementById('editor');
     }
 
-    snapshotEditor('before-restore');
-    if (window.editorHistory) window.editorHistory.quiet = true;
-    editor.innerHTML = data.html;
-    reinitEditorAfterHistory();
-    if (window.editorHistory) {
-        window.editorHistory.quiet = false;
-        window.editorHistory.lastSnapshotHtml = data.html;
+    function setAutosaveStatus(text) {
+        const el = document.getElementById('autosave-status');
+        if (!el) return;
+        el.textContent = text || '';
     }
-    _lastAutosavedHtml = data.html;
-    _autosaveDirty = false;
 
-    const t = data.savedAt ? new Date(data.savedAt).toLocaleString('ru-RU') : '';
-    showNotification(t ? 'Сессия восстановлена (' + t + ')' : 'Сессия восстановлена', 'success');
-    setAutosaveStatus('Восстановлено');
-    if (typeof updateHistoryButtons === 'function') updateHistoryButtons();
-}
+    function markAutosaveDirty() {
+        dirty = true;
+        setAutosaveStatus('Изменения…');
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(flushAutosave, DEBOUNCE_MS);
+    }
 
-function setupAutosave() {
-    const editor = document.getElementById('editor');
-    if (!editor) return;
-
-    // Отслеживание правок текста для истории и автосохранения
-    editor.addEventListener('input', function () {
-        if (window.editorHistory && window.editorHistory.quiet) return;
-        snapshotEditorDebounced();
-    }, true);
-
-    // Периодическое быстрое автосохранение сессии (crash recovery)
-    if (_autosaveTimer) clearInterval(_autosaveTimer);
-    _autosaveTimer = setInterval(function () {
-        if (_autosaveDirty) saveAutosaveNow(false);
-    }, AUTOSAVE_INTERVAL_MS);
-
-    // Сохранение при уходе со страницы
-    window.addEventListener('beforeunload', function () {
-        if (_autosaveDirty) saveAutosaveNow(true);
-        // при закрытии — по возможности зафиксировать версию, если были изменения
-        if (typeof tryAutoVersionSnapshot === 'function') tryAutoVersionSnapshot(true);
-    });
-    document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'hidden' && _autosaveDirty) {
-            saveAutosaveNow(true);
+    function flushAutosave() {
+        timer = null;
+        if (!dirty) return;
+        const editor = getEditor();
+        if (!editor) return;
+        const html = editor.innerHTML;
+        if (html === lastSavedHtml) {
+            dirty = false;
+            return;
         }
-    });
+        try {
+            const payload = {
+                html: html,
+                savedAt: Date.now(),
+                title: document.title || ''
+            };
+            localStorage.setItem(SESSION_KEY, JSON.stringify(payload));
+            lastSavedHtml = html;
+            dirty = false;
+            updateRestoreButtonVisibility();
+            setAutosaveStatus('Сохранено ' + new Date(payload.savedAt).toLocaleTimeString('ru-RU', {
+                hour: '2-digit',
+                minute: '2-digit'
+            }));
+        } catch (e) {
+            setAutosaveStatus('Ошибка сохранения');
+            if (typeof showNotification === 'function') {
+                showNotification('Автосохранение сессии недоступно (хранилище)', 'warning');
+            }
+        }
+    }
 
-    // Кнопки
-    const undoBtn = document.getElementById('undo-btn');
-    const redoBtn = document.getElementById('redo-btn');
-    const restoreBtn = document.getElementById('restore-session-btn');
-    const versionsBtn = document.getElementById('versions-btn');
-    if (undoBtn) undoBtn.addEventListener('click', function () { undoEditor(); });
-    if (redoBtn) redoBtn.addEventListener('click', function () { redoEditor(); });
-    if (restoreBtn) restoreBtn.addEventListener('click', function () { restoreLastSession(); });
-    if (versionsBtn) versionsBtn.addEventListener('click', function () { if (typeof openVersionsModal === 'function') openVersionsModal(); });
+    function loadSessionPayload() {
+        try {
+            const raw = localStorage.getItem(SESSION_KEY);
+            if (!raw) return null;
+            const data = JSON.parse(raw);
+            if (!data || typeof data.html !== 'string' || !data.html.trim()) return null;
+            return data;
+        } catch (e) {
+            return null;
+        }
+    }
 
-    updateRestoreButtonVisibility();
-    if (typeof setupVersionHistory === 'function') setupVersionHistory();
+    function updateRestoreButtonVisibility() {
+        const btn = document.getElementById('restore-session-btn');
+        if (!btn) return;
+        const data = loadSessionPayload();
+        const editor = getEditor();
+        const current = editor ? editor.innerHTML : '';
+        // Показываем, если есть снимок и он отличается от текущего содержимого
+        const hasUseful = data && data.html && data.html !== current;
+        btn.style.display = hasUseful ? '' : 'none';
+        if (hasUseful && data.savedAt) {
+            const d = new Date(data.savedAt);
+            btn.title = 'Восстановить сессию от ' + d.toLocaleString('ru-RU');
+        }
+    }
 
-    // Первое сохранение через интервал, если пользователь уже что-то менял
-    setTimeout(function () {
-        if (_autosaveDirty) saveAutosaveNow(false);
-    }, 2000);
-}
+    function restoreAutosaveSession() {
+        const data = loadSessionPayload();
+        if (!data) {
+            if (typeof showNotification === 'function') {
+                showNotification('Нет сохранённой сессии', 'info');
+            }
+            return;
+        }
+        const editor = getEditor();
+        if (!editor) return;
+        if (typeof snapshotEditor === 'function') snapshotEditor('before-restore-session');
+        editor.innerHTML = data.html;
+        if (typeof reinitializeBlocks === 'function') {
+            reinitializeBlocks();
+        } else {
+            editor.querySelectorAll('.block').forEach(function (block) {
+                if (typeof addBlockEventListeners === 'function') addBlockEventListeners(block);
+                if (typeof initDragForElement === 'function') initDragForElement(block);
+            });
+            editor.querySelectorAll('.free-text-block').forEach(function (b) {
+                if (typeof bindFreeTextBlock === 'function') {
+                    b.dataset.bound = '';
+                    bindFreeTextBlock(b);
+                }
+            });
+        }
+        lastSavedHtml = data.html;
+        dirty = false;
+        updateRestoreButtonVisibility();
+        if (typeof showNotification === 'function') {
+            showNotification('Сессия восстановлена', 'success');
+        }
+    }
 
-// Экспорт в глобальную область (переходный период)
-window.markAutosaveDirty = markAutosaveDirty;
-window.getEditorHtmlForSave = getEditorHtmlForSave;
-window.isEditorEffectivelyEmpty = isEditorEffectivelyEmpty;
-window.saveAutosaveNow = saveAutosaveNow;
-window.loadAutosavePayload = loadAutosavePayload;
-window.setAutosaveStatus = setAutosaveStatus;
-window.updateRestoreButtonVisibility = updateRestoreButtonVisibility;
-window.restoreLastSession = restoreLastSession;
-window.setupAutosave = setupAutosave;
+    function clearAutosaveSession() {
+        try {
+            localStorage.removeItem(SESSION_KEY);
+        } catch (e) {}
+        lastSavedHtml = null;
+        dirty = false;
+        updateRestoreButtonVisibility();
+    }
+
+    function setupAutosave() {
+        const editor = getEditor();
+        if (editor) {
+            lastSavedHtml = editor.innerHTML;
+        }
+        updateRestoreButtonVisibility();
+
+        const restoreBtn = document.getElementById('restore-session-btn');
+        if (restoreBtn) {
+            restoreBtn.addEventListener('click', function () {
+                if (!confirm('Восстановить последнюю автосохранённую сессию? Текущее содержимое будет заменено.')) return;
+                restoreAutosaveSession();
+            });
+        }
+
+        // Сохранить при уходе со страницы
+        window.addEventListener('beforeunload', function () {
+            if (dirty) flushAutosave();
+        });
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'hidden' && dirty) flushAutosave();
+        });
+
+        // Периодический flush на случай долгой работы
+        setInterval(function () {
+            if (dirty) flushAutosave();
+        }, 30000);
+    }
+
+    window.markAutosaveDirty = markAutosaveDirty;
+    window.setupAutosave = setupAutosave;
+    window.restoreAutosaveSession = restoreAutosaveSession;
+    window.clearAutosaveSession = clearAutosaveSession;
+})();

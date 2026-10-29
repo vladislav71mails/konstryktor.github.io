@@ -163,13 +163,10 @@ function createSpoilerBlock() {
         </div>
         <div class="editable-content" contenteditable="false">
             <details class="spoiler-container" style="margin-bottom: 20px; border: 1px solid var(--tpl-spoiler-border, #ccc); border-radius: 5px;">
-                <summary class="spoiler-header" style="background: var(--tpl-spoiler-bg, #f5f5f5); padding: 12px 15px; cursor: pointer; font-weight: bold; color: var(--text-color, #333);">
-                    <strong>Название спойлера</strong>
-                </summary>
+                <summary class="spoiler-header" contenteditable="true" data-placeholder="Название спойлера" style="background: var(--tpl-spoiler-bg, #f5f5f5); padding: 12px 15px; cursor: pointer; font-weight: bold; color: var(--text-color, #333);"></summary>
                 <div class="spoiler-content" style="padding: 15px;">
-                    Содержимое спойлера
-                    <div class="nested-editor" contenteditable="true">
-                    </div>
+                    <div class="spoiler-body" contenteditable="true" data-placeholder="Содержимое спойлера…"></div>
+                    <div class="nested-editor" contenteditable="true" data-placeholder="Доп. текст или макрос…"></div>
                 </div>
             </details>
         </div>
@@ -207,12 +204,10 @@ function createWarningBlock() {
             <div class="warning-container" style="background: var(--tpl-warning-bg, #ffd1d1); border: 2px solid var(--tpl-warning-border, #7a0000); padding: 15px; margin-bottom: 15px; border-radius: 4px; color: var(--text-color, #333);">
                 <div class="warning-header" style="display: flex; align-items: center; margin-bottom: 10px;">
                     <div class="warning-icon" style="border: 2px solid var(--tpl-warning-border, #7a0000); background: var(--tpl-warning-icon-bg, #ffc6e3); color: var(--tpl-warning-text, #7a0000); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">!</div>
-                    <div class="warning-title" contenteditable="true"><strong>Важно !</strong></div>
+                    <div class="warning-title" contenteditable="true" data-placeholder="Важно !"></div>
                 </div>
                 <div class="warning-content-area">
-                    <div class="warning-text" contenteditable="true">
-                        Текст предупреждения
-                    </div>
+                    <div class="warning-text" contenteditable="true" data-placeholder="Текст предупреждения…"></div>
                     <div class="nested-content" style="margin-top: 15px;">
                         <!-- Здесь будут вложенные макросы и текст -->
                     </div>
@@ -252,12 +247,11 @@ function createSuccessBlock() {
             <div class="success-container" style="background: var(--tpl-success-bg, #eaf8db); border: 2px solid var(--tpl-success-border, #2e7d32); padding: 15px; margin-bottom: 15px; border-radius: 4px; color: var(--text-color, #333);">
                 <div class="success-header" style="display: flex; align-items: center; margin-bottom: 10px;">
                     <div class="success-icon" style="border: 2px solid var(--tpl-success-border, #2e7d32); background: var(--tpl-success-icon-bg, #c8e6c9); color: var(--tpl-success-text, #2e7d32); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">✓</div>
-                    <div class="success-title"><strong>Успешно !</strong></div>
+                    <div class="success-title" contenteditable="true" data-placeholder="Успешно !"></div>
                 </div>
                 <div class="success-text">
-                    Текст успешного действия
-                    <div class="nested-editor" contenteditable="true">
-                    </div>
+                    <div class="success-body" contenteditable="true" data-placeholder="Текст успешного действия…"></div>
+                    <div class="nested-editor" contenteditable="true" data-placeholder="Доп. текст…"></div>
                 </div>
             </div>
         </div>
@@ -294,13 +288,12 @@ function createNoteBlock() {
         <div class="editable-content" contenteditable="false">
             <div class="note-container" style="background: var(--tpl-note-bg, #fffed1); border: 2px solid var(--tpl-note-border, #ffc107); padding: 15px; margin-bottom: 15px; border-radius: 4px; color: var(--text-color, #333);">
                 <div class="note-header" style="display: flex; align-items: center; margin-bottom: 10px;">
-                    <div class="note-icon" style="border: 2px solid var(--tpl-note-border, #ffc107); background: var(--tpl-note-icon-bg, #fff9c4); color: var(--tpl-note-text, #ffc107); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">📝</div>
-                    <div class="note-title"><strong>Примечание</strong></div>
+                    <div class="note-icon" style="border: 2px solid var(--tpl-note-border, #ffc107); background: var(--tpl-note-icon-bg, #fff9c4); color: var(--tpl-note-text, #ffc107); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">i</div>
+                    <div class="note-title" contenteditable="true" data-placeholder="Примечание"></div>
                 </div>
                 <div class="note-text">
-                    Текст примечания
-                    <div class="nested-editor" contenteditable="true">
-                    </div>
+                    <div class="note-body" contenteditable="true" data-placeholder="Текст примечания…"></div>
+                    <div class="nested-editor" contenteditable="true" data-placeholder="Доп. текст…"></div>
                 </div>
             </div>
         </div>
@@ -338,12 +331,11 @@ function createNumberedBlock() {
             <div class="numbered-container" style="background: var(--tpl-numbered-bg, #f8f9fa); border: 1px solid var(--tpl-numbered-border, #e9ecef); padding: 15px; margin-bottom: 15px; border-radius: 4px; color: var(--text-color, #333);">
                 <div class="numbered-header" style="display: flex; align-items: center; margin-bottom: 10px;">
                     <div class="number-circle" style="background: var(--tpl-numbered-circle-bg, #222222); color: var(--tpl-numbered-circle-text, #fff); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">1</div>
-                    <div class="numbered-title"><strong>Заголовок</strong></div>
+                    <div class="numbered-title" contenteditable="true" data-placeholder="Заголовок шага"></div>
                 </div>
                 <div class="numbered-content">
-                    Содержимое блока
-                    <div class="nested-editor" contenteditable="true">
-                    </div>
+                    <div class="numbered-body" contenteditable="true" data-placeholder="Описание шага…"></div>
+                    <div class="nested-editor" contenteditable="true" data-placeholder="Доп. текст…"></div>
                 </div>
             </div>
         </div>
@@ -379,9 +371,8 @@ function createCodeBlock() {
         </div>
         <div class="editable-content" contenteditable="false">
             <div class="code-container" style="background: var(--tpl-code-bg, #f8f8f8); padding: 5px; border: 1px solid var(--tpl-code-border, #ddd); border-radius: 5px; color: var(--tpl-code-text, #1e1e1e);">
-                <code class="code-content">ТЕКСТ</code>
-                <div class="nested-editor" contenteditable="true">
-                </div>
+                <code class="code-content" contenteditable="true" data-placeholder="Код или команда…"></code>
+                <div class="nested-editor" contenteditable="true" data-placeholder="Комментарий…"></div>
             </div>
         </div>
     </div>`;
@@ -444,9 +435,7 @@ function createImageBlock() {
                     <p class="image-upload-hint">PNG, JPG, GIF, WebP — сохранится в ZIP при экспорте</p>
                     <input type="file" class="image-block-file-input" accept="image/*" hidden>
                 </div>
-                <div class="image-caption" contenteditable="true" style="color: var(--tpl-image-caption, #666); font-style: italic; font-size: 14px;">
-                    Описание изображения
-                </div>
+                <div class="image-caption" contenteditable="true" data-placeholder="Подпись к изображению…" style="color: var(--tpl-image-caption, #666); font-style: italic; font-size: 14px;"></div>
             </div>
         </div>
     </div>`;
@@ -481,12 +470,8 @@ function createQuoteBlock() {
         </div>
         <div class="editable-content" contenteditable="false">
             <div class="quote-container" style="background: var(--tpl-quote-bg, #f0f8ff); border-left: 4px solid var(--tpl-quote-border, #4a90e2); padding: 15px 20px; margin-bottom: 15px; border-radius: 0 4px 4px 0;">
-                <div class="quote-text" style="font-style: italic; color: var(--tpl-quote-text, #2c3e50); line-height: 1.6;">
-                    "Важная цитата или ключевая мысль, которую нужно выделить в тексте"
-                </div>
-                <div class="quote-author" style="margin-top: 10px; text-align: right; color: var(--tpl-quote-author, #7f8c8d); font-size: 14px;">
-                    — Автор или источник
-                </div>
+                <div class="quote-text" contenteditable="true" data-placeholder="Текст цитаты…" style="font-style: italic; color: var(--tpl-quote-text, #2c3e50); line-height: 1.6;"></div>
+                <div class="quote-author" contenteditable="true" data-placeholder="— Автор или источник" style="margin-top: 10px; text-align: right; color: var(--tpl-quote-author, #7f8c8d); font-size: 14px;"></div>
             </div>
         </div>
     </div>`;
@@ -542,9 +527,9 @@ function createLinkButtonsBlock() {
         </div>
         <div class="editable-content" contenteditable="false">
             <div class="link-buttons-container" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
-                <a class="link-button" contenteditable="true" style="padding: 8px 12px; background: #20c997; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block;" href="https://example.com">Ссылка 1</a>
-                <a class="link-button" contenteditable="true" style="padding: 8px 12px; background: #20c997; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block;" href="https://example.com">Ссылка 2</a>
-                <a class="link-button" contenteditable="true" style="padding: 8px 12px; background: #20c997; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block;" href="https://example.com">Ссылка 3</a>
+                <a class="link-button" contenteditable="true" data-placeholder="Ссылка 1" style="padding: 8px 12px; background: #20c997; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block;" href="https://example.com"></a>
+                <a class="link-button" contenteditable="true" data-placeholder="Ссылка 2" style="padding: 8px 12px; background: #20c997; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block;" href="https://example.com"></a>
+                <a class="link-button" contenteditable="true" data-placeholder="Ссылка 3" style="padding: 8px 12px; background: #20c997; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block;" href="https://example.com"></a>
             </div>
         </div>
     </div>`;
@@ -618,26 +603,18 @@ function create1CConfigurationBlock() {
             <div class="config-container" style="background: var(--tpl-1c-bg, #FFFBEA); border: 1px solid ${c1cBorder}; padding: 15px; margin-bottom: 15px; border-radius: 6px;">
                 <div class="config-header" style="display: flex; align-items: center; margin-bottom: 12px; gap: 10px;">
                     <div class="config-icon" contenteditable="false" style="background: ${c1cYellow}; color: ${c1cText}; width: 36px; height: 36px; min-width: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; border: 2px solid ${c1cYellowDark}; box-shadow: 0 1px 3px rgba(0,0,0,0.12); font-family: Arial, sans-serif;">1С</div>
-                    <div class="config-title" contenteditable="true" style="font-size: 1.05rem; color: var(--tpl-1c-text, ${c1cText});"><strong>Настройка оборудования в 1С</strong></div>
+                    <div class="config-title" contenteditable="true" data-placeholder="Заголовок блока" style="font-size: 1.05rem; color: var(--tpl-1c-text, ${c1cText});"></div>
                 </div>
 
                 <div class="config-sections">
                     <details class="config-details" open style="margin-bottom: 12px; border: 1px solid ${c1cBorder}; border-radius: 6px; overflow: hidden;">
-                        <summary class="config-summary" contenteditable="true" style="background: ${c1cAccent}; padding: 10px 14px; cursor: pointer; font-weight: bold; color: #ffffff; list-style: none;">«Бухгалтерия предприятия»</summary>
-                        <div class="config-content" contenteditable="true" style="padding: 14px; background: var(--tpl-1c-content-bg, #ffffff); color: var(--tpl-1c-text, ${c1cText}); min-height: 40px;">
-                            <strong>Путь настройки:</strong><br>
-                            «Администрирование» → «Поддержка оборудования» → «Подключаемое оборудование» → «Подключить новое»
-                            <div class="nested-editor" contenteditable="true" style="min-height: 24px; margin-top: 8px;"></div>
-                        </div>
+                        <summary class="config-summary" contenteditable="true" data-placeholder="Вариант 1" style="background: ${c1cAccent}; padding: 10px 14px; cursor: pointer; font-weight: bold; color: #ffffff; list-style: none;"></summary>
+                        <div class="config-content" contenteditable="true" data-placeholder="Описание первого варианта…" style="padding: 14px; background: var(--tpl-1c-content-bg, #ffffff); color: var(--tpl-1c-text, ${c1cText}); min-height: 40px;"></div>
                     </details>
 
                     <details class="config-details" style="margin-bottom: 12px; border: 1px solid ${c1cBorder}; border-radius: 6px; overflow: hidden;">
-                        <summary class="config-summary" contenteditable="true" style="background: ${c1cAccent}; padding: 10px 14px; cursor: pointer; font-weight: bold; color: #ffffff; list-style: none;">«Управление нашей фирмой»</summary>
-                        <div class="config-content" contenteditable="true" style="padding: 14px; background: var(--tpl-1c-content-bg, #ffffff); color: var(--tpl-1c-text, ${c1cText}); min-height: 40px;">
-                            <strong>Путь настройки:</strong><br>
-                            «Настройки» → «Поддержка оборудования» → «Подключаемое оборудование»
-                            <div class="nested-editor" contenteditable="true" style="min-height: 24px; margin-top: 8px;"></div>
-                        </div>
+                        <summary class="config-summary" contenteditable="true" data-placeholder="Вариант 2" style="background: ${c1cAccent}; padding: 10px 14px; cursor: pointer; font-weight: bold; color: #ffffff; list-style: none;"></summary>
+                        <div class="config-content" contenteditable="true" data-placeholder="Описание второго варианта…" style="padding: 14px; background: var(--tpl-1c-content-bg, #ffffff); color: var(--tpl-1c-text, ${c1cText}); min-height: 40px;"></div>
                     </details>
                 </div>
 
@@ -676,7 +653,7 @@ function createGlossaryBlock() {
         </div>
         <div class="editable-content" contenteditable="false">
             <div class="glossary-container" style="background: var(--tpl-glossary-bg, #e8f4fd); border-left: 4px solid var(--tpl-glossary-border, #2196F3); padding: 10px 15px; margin: 10px 0; color: var(--tpl-glossary-text, #1a1a1a);">
-                <strong>ЦТО:</strong> Центр технологического обслуживания - отвечает за настройку оборудования
+                <span class="glossary-term" contenteditable="true" data-placeholder="Термин" style="font-weight: bold;"></span><span>: </span><span class="glossary-def" contenteditable="true" data-placeholder="Краткое определение…"></span>
             </div>
         </div>
     </div>`;
@@ -732,9 +709,7 @@ function createImageCaptionBlock() {
                     <p class="image-upload-hint">Файл попадёт в папку images/ при экспорте ZIP</p>
                     <input type="file" class="image-block-file-input" accept="image/*" hidden>
                 </div>
-                <div class="caption-text" contenteditable="true" style="color: var(--tpl-image-caption, #666); font-style: italic; font-size: 14px; margin-top: 5px;">
-                    Описание изображения или скриншота
-                </div>
+                <div class="caption-text" contenteditable="true" data-placeholder="Подпись к изображению…" style="color: var(--tpl-image-caption, #666); font-style: italic; font-size: 14px; margin-top: 5px;"></div>
             </div>
         </div>
     </div>`;
@@ -770,19 +745,19 @@ function createTypeComparisonBlock() {
         <div class="editable-content" contenteditable="false">
             <div class="type-comparison-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
                 <div class="comparison-item" style="background: var(--tpl-comparison-bg, #f8f9fa); padding: 15px; border-radius: 4px; color: var(--text-color, #333);">
-                    <strong>COM-порт</strong>
+                    <div class="comparison-title" contenteditable="true" data-placeholder="Вариант A" style="font-weight: bold;"></div>
                     <ul class="comparison-features" style="margin: 10px 0; padding-left: 20px;">
-                        <li>Физическое подключение через COM-порт</li>
-                        <li>Требует настройки порта в системе</li>
-                        <li>Стабильное соединение</li>
+                        <li contenteditable="true" data-placeholder="Отличие 1"></li>
+                        <li contenteditable="true" data-placeholder="Отличие 2"></li>
+                        <li contenteditable="true" data-placeholder="Отличие 3"></li>
                     </ul>
                 </div>
                 <div class="comparison-item" style="background: var(--tpl-comparison-bg, #f8f9fa); padding: 15px; border-radius: 4px; color: var(--text-color, #333);">
-                    <strong>IP-подключение</strong>
+                    <div class="comparison-title" contenteditable="true" data-placeholder="Вариант B" style="font-weight: bold;"></div>
                     <ul class="comparison-features" style="margin: 10px 0; padding-left: 20px;">
-                        <li>Сетевое подключение по TCP/IP</li>
-                        <li>Требует настройки сетевых параметров</li>
-                        <li>Удобно для удаленного доступа</li>
+                        <li contenteditable="true" data-placeholder="Отличие 1"></li>
+                        <li contenteditable="true" data-placeholder="Отличие 2"></li>
+                        <li contenteditable="true" data-placeholder="Отличие 3"></li>
                     </ul>
                 </div>
             </div>
@@ -821,7 +796,8 @@ function createDeveloperNoteBlock() {
         </div>
         <div class="editable-content" contenteditable="false">
             <div class="developer-note-container" style="background: var(--tpl-devnote-bg, #fff3cd); border: 1px solid var(--tpl-devnote-border, #ffeaa7); padding: 10px; margin: 10px 0; border-radius: 4px; color: var(--tpl-devnote-text, #5c4a00);">
-                <strong>💡 Примечание разработчика:</strong> Техническая информация или важное замечание по реализации
+                <strong contenteditable="false">💡 Примечание:</strong>
+                <span class="devnote-body" contenteditable="true" data-placeholder="Текст примечания…"></span>
             </div>
         </div>
     </div>`;
@@ -857,7 +833,7 @@ function createHeadingBlock(level) {
             ${universalSettingsHTML}
         </div>
         <div class="editable-content" contenteditable="false">
-            <${tag} class="editor-heading" contenteditable="true" data-placeholder="${labels[tag]}">${labels[tag]}</${tag}>
+            <${tag} class="editor-heading" contenteditable="true" data-placeholder="${labels[tag]}"></${tag}>
         </div>
     </div>`;
 }
@@ -869,7 +845,7 @@ function buildTableRowsHtml(rows, cols) {
         for (let c = 0; c < cols; c++) {
             const tag = r === 0 ? 'th' : 'td';
             const placeholder = r === 0 ? `Колонка ${c + 1}` : `Ячейка ${r},${c + 1}`;
-            html += `<${tag} contenteditable="true">${placeholder}</${tag}>`;
+            html += `<${tag} contenteditable="true" data-placeholder="${placeholder}"></${tag}>`;
         }
         html += '</tr>';
     }
@@ -1077,16 +1053,16 @@ function createFaqBlock() {
         <div class="editable-content" contenteditable="false">
             <div class="faq-list">
                 <details class="faq-item" open>
-                    <summary class="faq-question" contenteditable="true">Вопрос 1?</summary>
-                    <div class="faq-answer" contenteditable="true">Ответ на первый вопрос.</div>
+                    <summary class="faq-question" contenteditable="true" data-placeholder="Вопрос 1?"></summary>
+                    <div class="faq-answer" contenteditable="true" data-placeholder="Ответ на вопрос…"></div>
                 </details>
                 <details class="faq-item">
-                    <summary class="faq-question" contenteditable="true">Вопрос 2?</summary>
-                    <div class="faq-answer" contenteditable="true">Ответ на второй вопрос.</div>
+                    <summary class="faq-question" contenteditable="true" data-placeholder="Вопрос 2?"></summary>
+                    <div class="faq-answer" contenteditable="true" data-placeholder="Ответ на вопрос…"></div>
                 </details>
                 <details class="faq-item">
-                    <summary class="faq-question" contenteditable="true">Вопрос 3?</summary>
-                    <div class="faq-answer" contenteditable="true">Ответ на третий вопрос.</div>
+                    <summary class="faq-question" contenteditable="true" data-placeholder="Вопрос 3?"></summary>
+                    <div class="faq-answer" contenteditable="true" data-placeholder="Ответ на вопрос…"></div>
                 </details>
             </div>
         </div>
@@ -1106,12 +1082,12 @@ function createBeforeAfterBlock() {
         <div class="editable-content" contenteditable="false">
             <div class="before-after-grid">
                 <div class="before-after-col before-col">
-                    <div class="before-after-label" contenteditable="true">До</div>
-                    <div class="before-after-body" contenteditable="true">Описание или скриншот «до»</div>
+                    <div class="before-after-label" contenteditable="true" data-placeholder="До"></div>
+                    <div class="before-after-body" contenteditable="true" data-placeholder="Описание «до»…"></div>
                 </div>
                 <div class="before-after-col after-col">
-                    <div class="before-after-label" contenteditable="true">После</div>
-                    <div class="before-after-body" contenteditable="true">Описание или скриншот «после»</div>
+                    <div class="before-after-label" contenteditable="true" data-placeholder="После"></div>
+                    <div class="before-after-body" contenteditable="true" data-placeholder="Описание «после»…"></div>
                 </div>
             </div>
         </div>
@@ -1132,15 +1108,15 @@ function createMetaAuthorBlock() {
             <div class="meta-author-wrap">
                 <div class="meta-row">
                     <span class="meta-label">Автор:</span>
-                    <span class="meta-value meta-author" contenteditable="true">Имя автора</span>
+                    <span class="meta-value meta-author" contenteditable="true" data-placeholder="Имя автора"></span>
                 </div>
                 <div class="meta-row">
                     <span class="meta-label">Дата:</span>
-                    <span class="meta-value meta-date" contenteditable="true">${new Date().toLocaleDateString('ru-RU')}</span>
+                    <span class="meta-value meta-date" contenteditable="true" data-placeholder="ДД.ММ.ГГГГ"></span>
                 </div>
                 <div class="meta-row">
                     <span class="meta-label">Теги:</span>
-                    <span class="meta-value meta-tags" contenteditable="true">тег1, тег2</span>
+                    <span class="meta-value meta-tags" contenteditable="true" data-placeholder="тег1, тег2"></span>
                 </div>
             </div>
         </div>

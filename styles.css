@@ -225,6 +225,15 @@ body {
     flex-shrink: 0;
 }
 
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex-shrink: 0;
+    margin-right: auto; /* прижать Wiki + заголовок влево */
+}
+
 .header h1 {
     margin: 0;
     font-size: 1.25rem;
@@ -233,12 +242,30 @@ body {
     white-space: nowrap;
 }
 
-.header > div,
+/* Не давать header-left растягиваться — только actions */
 .header-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.header-group {
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
     align-items: center;
+}
+
+.header-sep {
+    width: 1px;
+    height: 22px;
+    background: var(--border-color);
+    flex-shrink: 0;
+    opacity: 0.85;
 }
 
 .header button,
@@ -303,28 +330,85 @@ body {
 
 .export-btn {
     background: var(--primary-color);
-    color: #fff;
+    color: #fff !important;
     border-color: var(--primary-color);
 }
 
 .export-btn:hover {
     background: var(--primary-hover);
-    color: #fff;
+    color: #fff !important;
 }
 
 .export-btn svg {
     opacity: 1;
+    stroke: currentColor;
 }
 
-.group-actions {
+.export-btn span {
+    color: inherit;
+}
+
+.wiki-btn {
+    flex-shrink: 0;
+}
+
+.wiki-modal-content {
+    max-width: 640px;
+    max-height: 85vh;
+    overflow: auto;
+}
+
+.wiki-body {
+    padding: 16px 20px 20px;
+    line-height: 1.5;
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.wiki-body section {
+    margin-bottom: 1.1rem;
+}
+
+.wiki-body h3 {
+    margin: 0 0 0.4rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.wiki-body p,
+.wiki-body ul {
+    margin: 0 0 0.5rem;
+}
+
+.wiki-body ul {
+    padding-left: 1.25rem;
+}
+
+.wiki-body li {
+    margin-bottom: 0.25rem;
+}
+
+.wiki-body kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--secondary-color, #f0f0f0);
+    font-size: 0.8em;
+    font-family: inherit;
+}
+
+.wiki-body code {
+    font-size: 0.85em;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: var(--secondary-color, #f0f0f0);
+}
+
+.toolbar .group-actions {
     display: flex;
-    gap: 6px;
-    margin-left: 12px;
-}
-
-.group-actions button {
-    padding: 6px 10px;
-    font-size: 0.8rem;
+    gap: 2px;
+    margin-left: 0;
 }
 
 /* ========== TOOLBAR ========== */
@@ -383,6 +467,24 @@ body {
 .toolbar-btn svg {
     width: 18px;
     height: 18px;
+}
+
+.toolbar-btn-label {
+    width: auto;
+    min-width: 34px;
+    padding: 0 8px;
+    gap: 5px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.toolbar-btn-label span {
+    line-height: 1;
+}
+
+.toolbar-btn-danger:hover {
+    color: #c0392b;
+    border-color: #e74c3c;
 }
 
 .toolbar-select-wrapper {
@@ -844,6 +946,24 @@ body.dark .template-item-icon {
     top: 6px;
 }
 
+/* Плейсхолдеры contenteditable в блоках (как у input) */
+.editable-content [contenteditable="true"][data-placeholder] {
+    position: relative;
+    min-height: 1.2em;
+}
+.editable-content [contenteditable="true"][data-placeholder]:not(.has-content):empty::before,
+.editable-content [contenteditable="true"][data-placeholder]:not(.has-content):has(> br:only-child)::before {
+    content: attr(data-placeholder);
+    color: var(--placeholder-color);
+    pointer-events: none;
+    opacity: 0.85;
+}
+/* summary (спойлер, FAQ, 1С) — плейсхолдер без absolute, чтобы не ломать layout */
+.editable-content summary[contenteditable="true"][data-placeholder]:not(.has-content):empty::before,
+.editable-content summary[contenteditable="true"][data-placeholder]:not(.has-content):has(> br:only-child)::before {
+    position: static;
+}
+
 .drop-zone {
     border: 2px dashed var(--border-color);
     border-radius: var(--border-radius);
@@ -963,7 +1083,56 @@ body.dark .template-item-icon {
     cursor: grabbing;
 }
 
-/* Block actions */
+/* Чекбокс выделения блока (слева, под drag-handle) */
+.block-select {
+    position: absolute;
+    left: -28px;
+    top: 32px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    margin: 0;
+    border: 1.5px solid var(--border-color, #c5c5c5);
+    border-radius: 4px;
+    background: var(--bg-color, #fff);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s, border-color 0.15s;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+.block:hover .block-select,
+.block.selected .block-select {
+    opacity: 1;
+}
+
+.block-select.is-checked,
+.block.selected > .block-select {
+    background: var(--primary-color, #2563eb);
+    border-color: var(--primary-color, #2563eb);
+}
+
+.block-select.is-checked::after,
+.block.selected > .block-select::after {
+    content: '';
+    width: 10px;
+    height: 6px;
+    border-left: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translateY(-1px);
+    display: block;
+}
+
+body.dark-theme .block-select {
+    background: var(--bg-color);
+    border-color: var(--border-color);
+}
+
+/* Block actions — видимость только через CSS (без inline display из JS) */
 .block-actions {
     position: absolute;
     top: 4px;
@@ -976,10 +1145,14 @@ body.dark .template-item-icon {
     padding: 2px;
     z-index: 20;
     box-shadow: var(--block-shadow);
+    /* Небольшой «мост» к курсору, чтобы кнопки не мигали */
+    padding-top: 6px;
+    margin-top: -4px;
 }
 
 .block:hover .block-actions,
-.block.selected .block-actions {
+.block.selected .block-actions,
+.block-actions:hover {
     display: flex;
 }
 
@@ -1004,10 +1177,12 @@ body.dark .template-item-icon {
     height: 15px;
     flex-shrink: 0;
     opacity: 0.85;
+    stroke: currentColor;
 }
 
 .block-actions button:hover {
     background: var(--secondary-color);
+    color: var(--text-color);
 }
 
 .block-actions button:hover svg {
@@ -1017,6 +1192,15 @@ body.dark .template-item-icon {
 .block-actions .delete-block:hover {
     background: rgba(220, 53, 69, 0.12);
     color: #dc3545;
+}
+
+body.dark-theme .block-actions {
+    background: var(--surface-2, #2a2a2a);
+    border-color: var(--border-color);
+}
+
+body.dark-theme .block-actions button {
+    color: var(--text-color);
 }
 
 /* Block settings (insert macro) */
@@ -1398,6 +1582,7 @@ body.dark-theme .macro-group-title {
 }
 
 .notification.success {
+    top:100px;
     background: #d4edda;
     border: 1px solid #c3e6cb;
     color: #155724;
@@ -1840,6 +2025,10 @@ body.dark-theme .image-upload-zone {
         padding: 10px 12px;
     }
 
+    .header-left {
+        width: 100%;
+    }
+
     .header h1 {
         font-size: 1rem;
         white-space: normal;
@@ -1850,6 +2039,10 @@ body.dark-theme .image-upload-zone {
         width: 100%;
         justify-content: flex-start;
         gap: 6px;
+    }
+
+    .header-sep {
+        display: none;
     }
 
     .header button,
@@ -2421,16 +2614,33 @@ body.dark-theme a.link-button {
 /* === Publish / YouGile integration === */
 .publish-btn {
     background: #0d9488;
-    color: #fff;
+    color: #fff !important;
     border-color: #0d9488;
 }
 .publish-btn:hover {
     background: #0f766e;
     border-color: #0f766e;
-    color: #fff;
+    color: #fff !important;
 }
 .publish-btn svg {
     opacity: 1;
+    stroke: currentColor;
+}
+.publish-btn span {
+    color: inherit;
+}
+
+/* Обычные header-кнопки: явный цвет текста в обеих темах */
+.header-btn:not(.export-btn):not(.publish-btn),
+.header button:not(.export-btn):not(.publish-btn),
+.theme-toggle,
+.import-btn,
+.clear-btn {
+    color: var(--text-color);
+}
+.header-btn:not(.export-btn):not(.publish-btn) span,
+.header button:not(.export-btn):not(.publish-btn) span {
+    color: inherit;
 }
 
 .publish-modal-content {
@@ -2692,9 +2902,8 @@ body.dark-theme .publish-result.info {
 }
 
 .versions-settings {
-    padding: 12px 0 8px;
+    padding: 16px 20px 12px;
     border-bottom: 1px solid var(--border-color);
-    margin-bottom: 12px;
 }
 
 .versions-settings label {
@@ -2733,7 +2942,8 @@ body.dark-theme .publish-result.info {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    padding: 12px 20px 0;
+    margin-bottom: 0;
 }
 
 .versions-list {
@@ -2742,6 +2952,7 @@ body.dark-theme .publish-result.info {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    padding: 12px 20px 16px;
 }
 
 .versions-empty {
@@ -2821,7 +3032,8 @@ body.dark-theme .version-badge {
 .versions-compare-hint {
     font-size: 0.75rem;
     color: var(--text-muted, #888);
-    margin: 0 0 10px;
+    margin: 8px 0 0;
+    padding: 0 20px;
     line-height: 1.35;
 }
 
@@ -3853,6 +4065,30 @@ body.is-block-dragging * {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 0.85em;
     color: #334155;
+}
+
+/* Empty-state — тёмная тема */
+body.dark-theme .editor-empty-state {
+    border-color: #3d4a5c;
+    background: linear-gradient(180deg, #252a32 0%, #1e2228 100%);
+    color: #94a3b8;
+}
+body.dark-theme .editor-empty-state:hover,
+body.dark-theme .editor-empty-state.is-drag-over {
+    border-color: var(--primary-color, #4a90e2);
+    background: rgba(74, 144, 226, 0.1);
+    box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.15);
+}
+body.dark-theme .editor-empty-state .empty-title {
+    color: #e2e8f0;
+}
+body.dark-theme .editor-empty-state .empty-hint {
+    color: #94a3b8;
+}
+body.dark-theme .editor-empty-state kbd {
+    background: #334155;
+    border-color: #475569;
+    color: #e2e8f0;
 }
 
 /* Slash-меню (Notion-style) */

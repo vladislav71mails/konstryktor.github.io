@@ -167,7 +167,7 @@ function loadTemplates() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Templates.js loaded, initializing categories...');
+
     initTemplateCategories();
 });
 // Экспорт в глобальную область (переходный период)
