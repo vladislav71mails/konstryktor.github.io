@@ -1,764 +1,270 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Визуальный HTML-редактор</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Konstryktor — визуальный HTML-редактор</title>
+  <meta name="description" content="Блочный визуальный HTML-редактор статей и инструкций. Теперь доступен как расширение Chrome / Edge.">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon32.png">
+  <link rel="icon" type="image/png" sizes="128x128" href="icons/icon128.png">
+  <style>
+    :root {
+      --bg: #0b1220;
+      --bg-card: #111827;
+      --bg-elevated: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-soft: rgba(59, 130, 246, 0.12);
+      --success: #10b981;
+      --radius: 16px;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(59, 130, 246, 0.18), transparent 60%),
+        radial-gradient(900px 500px at 90% 0%, rgba(16, 185, 129, 0.12), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      line-height: 1.5;
+    }
+    .card {
+      width: 100%;
+      max-width: 520px;
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.9), rgba(17, 24, 39, 0.95));
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 4px);
+      box-shadow: var(--shadow);
+      padding: 36px 32px 28px;
+      text-align: center;
+      backdrop-filter: blur(8px);
+    }
+    .icon-wrap {
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 18px;
+      border-radius: 22px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+    .icon-wrap img {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: #93c5fd;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin-bottom: 14px;
+    }
+    .badge::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .lead {
+      color: var(--muted);
+      font-size: 1.02rem;
+      margin-bottom: 22px;
+    }
+    .move-box {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-bottom: 22px;
+      text-align: left;
+    }
+    .move-box strong {
+      display: block;
+      font-size: 0.95rem;
+      margin-bottom: 6px;
+    }
+    .move-box p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .cta {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 26px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .features {
+      text-align: left;
+      margin-bottom: 22px;
+    }
+    .features h2 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .features ul {
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+    .features li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 0.92rem;
+      color: #cbd5e1;
+    }
+    .features li .icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: #93c5fd;
+      display: grid;
+      place-items: center;
+      margin-top: 1px;
+    }
+    .features li .icon svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .footer {
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    @media (max-width: 480px) {
+      .card { padding: 28px 20px 22px; }
+      h1 { font-size: 1.5rem; }
+    }
+  </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-left">
-            <button id="wiki-btn" class="header-btn wiki-btn" title="Справка по проекту (Wiki)" aria-label="Wiki">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <span>Wiki</span>
-            </button>
-            <h1>Визуальный HTML-редактор</h1>
-        </div>
-        <div class="header-actions">
-            <!-- Быстрые: история -->
-            <div class="header-group" role="group" aria-label="История">
-                <button id="undo-btn" class="header-btn" title="Отменить (Ctrl+Z)" aria-label="Отменить">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.7 2.9L3 13"/></svg>
-                    <span>Отменить</span>
-                </button>
-                <button id="redo-btn" class="header-btn" title="Повторить (Ctrl+Y)" aria-label="Повторить" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.7 2.9L21 13"/></svg>
-                    <span>Повторить</span>
-                </button>
-                <button id="restore-session-btn" class="header-btn" title="Восстановить последнюю автосохранённую сессию" aria-label="Восстановить сессию" style="display:none;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                    <span>Восстановить</span>
-                </button>
-                <span id="autosave-status" class="autosave-status" title="Статус автосохранения" aria-live="polite"></span>
-            </div>
-            <span class="header-sep" aria-hidden="true"></span>
-            <!-- Меню Файл (документ) -->
-            <div class="header-group" role="group" aria-label="Документ">
-                <div class="header-menu" data-header-menu="file">
-                    <button type="button" class="header-btn header-menu-btn" id="file-menu-btn" aria-haspopup="true" aria-expanded="false" title="Файл">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        <span>Файл</span>
-                        <svg class="header-menu-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
-                    <div class="header-menu-panel" id="file-menu-panel" hidden role="menu">
-                        <button type="button" class="header-menu-item" role="menuitem" data-header-action="import" id="import-btn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            <span>Импорт HTML</span>
-                            <kbd>Ctrl+Shift+I</kbd>
-                        </button>
-                        <button type="button" class="header-menu-item" role="menuitem" data-header-action="export" id="export-btn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                            <span>Экспорт…</span>
-                            <kbd>Ctrl+E</kbd>
-                        </button>
-                        <button type="button" class="header-menu-item" role="menuitem" data-header-action="print" id="print-btn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                            <span>Печать / PDF</span>
-                            <kbd>Ctrl+P</kbd>
-                        </button>
-                        <div class="header-menu-sep" role="separator"></div>
-                        <button type="button" class="header-menu-item" role="menuitem" data-header-action="kb" id="kb-btn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                            <span>База знаний</span>
-                        </button>
-                        <button type="button" class="header-menu-item" role="menuitem" data-header-action="kb-publish" id="kb-publish-btn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                            <span>Сохранить в БЗ</span>
-                        </button>
-                        <button type="button" class="header-menu-item" role="menuitem" data-header-action="publish" id="publish-btn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                            <span>Передать материалы</span>
-                        </button>
-                        <div class="header-menu-sep" role="separator"></div>
-                        <button type="button" class="header-menu-item" role="menuitem" data-header-action="versions" id="versions-btn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span>История версий</span>
-                        </button>
-                        <button type="button" class="header-menu-item header-menu-item-danger" role="menuitem" data-header-action="clear" id="clear-btn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                            <span>Очистить редактор</span>
-                        </button>
-                    </div>
-                </div>
-                <!-- Главные действия на виду -->
-                <button id="kb-publish-quick" class="header-btn kb-publish-btn" title="Сохранить в базу знаний" aria-label="В БЗ">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                    <span>В БЗ</span>
-                </button>
-                <button id="export-quick" class="header-btn export-btn" title="Экспорт HTML" aria-label="Экспорт">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    <span>Экспорт</span>
-                </button>
-            </div>
-            <span class="header-sep" aria-hidden="true"></span>
-            <!-- Меню Вид -->
-            <div class="header-group" role="group" aria-label="Вид">
-                <div class="header-menu" data-header-menu="view">
-                    <button type="button" class="header-btn header-menu-btn" id="view-menu-btn" aria-haspopup="true" aria-expanded="false" title="Вид">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        <span>Вид</span>
-                        <svg class="header-menu-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
-                    <div class="header-menu-panel" id="view-menu-panel" hidden role="menu">
-                        <button type="button" class="header-menu-item" role="menuitem" id="theme-toggle">
-                            <svg class="icon-theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                            <span class="theme-label">Тёмная тема</span>
-                        </button>
-                        <button type="button" class="header-menu-item" role="menuitem" id="command-palette-btn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M11 8v6M8 11h6"/></svg>
-                            <span>Палитра команд</span>
-                            <kbd>Alt+K</kbd>
-                        </button>
-                        <button type="button" class="header-menu-item" role="menuitem" id="shortcuts-btn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
-                            <span>Горячие клавиши</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <span id="kb-current-badge" class="kb-current-badge" hidden title="Текущая статья базы знаний"></span>
-        </div>
+  <main class="card">
+    <div class="icon-wrap">
+      <img src="icons/icon128.png" alt="Konstryktor" width="56" height="56">
     </div>
-    
-<div class="toolbar">
-    <!-- Группа форматирования текста -->
-    <div class="toolbar-group">
-        <button id="bold-btn" class="toolbar-btn" title="Жирный (Ctrl+B)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
-                <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
-            </svg>
-        </button>
-        <button id="italic-btn" class="toolbar-btn" title="Курсив (Ctrl+I)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <line x1="19" y1="4" x2="10" y2="4"/>
-                <line x1="14" y1="20" x2="5" y2="20"/>
-                <line x1="15" y1="4" x2="9" y2="20"/>
-            </svg>
-        </button>
-        <button id="underline-btn" class="toolbar-btn" title="Подчеркнутый (Ctrl+U)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"/>
-                <line x1="4" y1="21" x2="20" y2="21"/>
-            </svg>
-        </button>
-        <button id="strikethrough-btn" class="toolbar-btn" title="Зачеркнутый">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M17.5 12H6.5"/>
-                <path d="M16 6.5C16 4.5 14.5 3 12 3C9.5 3 8 4.5 8 6.5C8 9 11.5 9.5 11.5 12"/>
-                <path d="M8 17.5C8 19.5 9.5 21 12 21C14.5 21 16 19.5 16 17.5C16 15 12.5 14.5 12.5 12"/>
-            </svg>
-        </button>
-        <button id="code-btn" class="toolbar-btn" title="Вставить код">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="16 18 22 12 16 6"/>
-                <polyline points="8 6 2 12 8 18"/>
-            </svg>
-        </button>
+    <div class="badge">Доступно в Chrome Web Store</div>
+    <h1>Konstryktor</h1>
+    <p class="lead">Визуальный HTML-редактор статей и инструкций</p>
+    <div class="move-box">
+      <strong>Веб-версия переехала в расширение</strong>
+      <p>
+        Редактор теперь устанавливается из&nbsp;Chrome Web Store и&nbsp;работает локально:
+        данные остаются в&nbsp;браузере, исходники не&nbsp;публикуются на&nbsp;сайте.
+      </p>
     </div>
-    
-    <div class="toolbar-separator"></div>
-    
-    <!-- Группа вставки -->
-    <div class="toolbar-group">
-        <button id="link-btn" class="toolbar-btn" title="Вставить ссылку">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-            </svg>
-        </button>
-        <button id="image-btn" class="toolbar-btn" title="Вставить изображение из файла">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
-            </svg>
-        </button>
+    <div class="cta">
+      <a class="btn btn-primary"
+         href="https://chromewebstore.google.com/detail/konstryktor-%E2%80%94-%D0%B2%D0%B8%D0%B7%D1%83%D0%B0%D0%BB%D1%8C%D0%BD%D1%8B%D0%B9/fkjpeddahkclbagkgpnlcchenakofnjp"
+         target="_blank"
+         rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <circle cx="12" cy="12" r="4"></circle>
+          <line x1="21.17" y1="8" x2="12" y2="8"></line>
+          <line x1="3.95" y1="6.06" x2="8.54" y2="14"></line>
+          <line x1="10.88" y1="21.94" x2="15.46" y2="14"></line>
+        </svg>
+        Установить из Chrome Web Store
+      </a>
     </div>
-    
-    <div class="toolbar-separator"></div>
-    
-    <!-- Группа шрифта (современные выпадающие панели) -->
-    <div class="toolbar-group">
-        <div class="toolbar-dropdown" id="font-size-dropdown" data-dropdown="font-size">
-            <button type="button" class="toolbar-dropdown-btn" id="font-size-btn" title="Размер текста" aria-haspopup="listbox" aria-expanded="false">
-                <span class="toolbar-dropdown-value" id="font-size-label">16</span>
-                <svg class="toolbar-dropdown-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-            <div class="toolbar-dropdown-panel" id="font-size-panel" role="listbox" hidden>
-                <button type="button" class="toolbar-dropdown-item" data-value="10px" role="option"><span class="fs-preview" style="font-size:10px">10</span><span class="fs-meta">10px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="11px" role="option"><span class="fs-preview" style="font-size:11px">11</span><span class="fs-meta">11px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="12px" role="option"><span class="fs-preview" style="font-size:12px">12</span><span class="fs-meta">12px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="13px" role="option"><span class="fs-preview" style="font-size:13px">13</span><span class="fs-meta">13px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="14px" role="option"><span class="fs-preview" style="font-size:14px">14</span><span class="fs-meta">14px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="15px" role="option"><span class="fs-preview" style="font-size:15px">15</span><span class="fs-meta">15px</span></button>
-                <button type="button" class="toolbar-dropdown-item is-active" data-value="16px" role="option"><span class="fs-preview" style="font-size:16px">16</span><span class="fs-meta">16px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="18px" role="option"><span class="fs-preview" style="font-size:18px">18</span><span class="fs-meta">18px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="20px" role="option"><span class="fs-preview" style="font-size:20px">20</span><span class="fs-meta">20px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="22px" role="option"><span class="fs-preview" style="font-size:22px">22</span><span class="fs-meta">22px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="24px" role="option"><span class="fs-preview" style="font-size:24px">24</span><span class="fs-meta">24px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="26px" role="option"><span class="fs-preview" style="font-size:26px">26</span><span class="fs-meta">26px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="28px" role="option"><span class="fs-preview" style="font-size:28px">28</span><span class="fs-meta">28px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="32px" role="option"><span class="fs-preview" style="font-size:28px">32</span><span class="fs-meta">32px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="36px" role="option"><span class="fs-preview" style="font-size:28px">36</span><span class="fs-meta">36px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="40px" role="option"><span class="fs-preview" style="font-size:28px">40</span><span class="fs-meta">40px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="48px" role="option"><span class="fs-preview" style="font-size:28px">48</span><span class="fs-meta">48px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="56px" role="option"><span class="fs-preview" style="font-size:28px">56</span><span class="fs-meta">56px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="64px" role="option"><span class="fs-preview" style="font-size:28px">64</span><span class="fs-meta">64px</span></button>
-                <button type="button" class="toolbar-dropdown-item" data-value="72px" role="option"><span class="fs-preview" style="font-size:28px">72</span><span class="fs-meta">72px</span></button>
-            </div>
-        </div>
-        <div class="toolbar-dropdown" id="font-family-dropdown" data-dropdown="font-family">
-            <button type="button" class="toolbar-dropdown-btn" id="font-family-btn" title="Шрифт" aria-haspopup="listbox" aria-expanded="false">
-                <span class="toolbar-dropdown-value" id="font-family-label">Шрифт</span>
-                <svg class="toolbar-dropdown-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-            <div class="toolbar-dropdown-panel toolbar-dropdown-panel-wide" id="font-family-panel" role="listbox" hidden>
-                <button type="button" class="toolbar-dropdown-item" data-value="'Inter', -apple-system, sans-serif" role="option" style="font-family:'Inter',-apple-system,sans-serif">Inter</button>
-                <button type="button" class="toolbar-dropdown-item" data-value="'Georgia', 'Times New Roman', serif" role="option" style="font-family:Georgia,'Times New Roman',serif">Georgia</button>
-                <button type="button" class="toolbar-dropdown-item" data-value="'Roboto Mono', 'Courier New', monospace" role="option" style="font-family:'Roboto Mono','Courier New',monospace">Roboto Mono</button>
-                <button type="button" class="toolbar-dropdown-item" data-value="'Merriweather', Georgia, serif" role="option" style="font-family:Merriweather,Georgia,serif">Merriweather</button>
-            </div>
-        </div>
-    </div>
-    <input type="file" id="image-file-input" accept="image/*" multiple hidden aria-hidden="true">
-    
-    <div class="toolbar-separator"></div>
-    
-    <!-- Группа цвета -->
-    <div class="toolbar-group color-toolbar-group">
-        <div class="color-picker-wrap" data-color-type="foreColor">
-            <button type="button" class="color-picker-btn" id="text-color-btn" title="Цвет текста">
-                <span class="color-label">A</span>
-                <span class="color-swatch" id="text-color-swatch" style="background:#000000"></span>
-            </button>
-        </div>
-        <div class="color-picker-wrap" data-color-type="backColor">
-            <button type="button" class="color-picker-btn" id="bg-color-btn" title="Цвет выделения">
-                <span class="color-label bg-label">A</span>
-                <span class="color-swatch" id="bg-color-swatch" style="background:#FFFF00"></span>
-            </button>
-        </div>
-    </div>
-    
-    <div class="toolbar-separator"></div>
-    
-    <!-- Группа выравнивания -->
-    <div class="toolbar-group">
-        <button id="align-left" class="toolbar-btn" title="По левому краю">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <line x1="3" y1="10" x2="15" y2="10"/>
-                <line x1="3" y1="14" x2="21" y2="14"/>
-                <line x1="3" y1="18" x2="17" y2="18"/>
-            </svg>
-        </button>
-        <button id="align-center" class="toolbar-btn" title="По центру">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <line x1="6" y1="10" x2="18" y2="10"/>
-                <line x1="3" y1="14" x2="21" y2="14"/>
-                <line x1="5" y1="18" x2="19" y2="18"/>
-            </svg>
-        </button>
-        <button id="align-right" class="toolbar-btn" title="По правому краю">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <line x1="9" y1="10" x2="21" y2="10"/>
-                <line x1="3" y1="14" x2="21" y2="14"/>
-                <line x1="7" y1="18" x2="21" y2="18"/>
-            </svg>
-        </button>
-    </div>
-    
-    <div class="toolbar-separator"></div>
-    
-    <!-- Группа списков -->
-    <div class="toolbar-group">
-        <button id="ordered-list" class="toolbar-btn" title="Нумерованный список">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="8" y1="6" x2="21" y2="6"/>
-                <line x1="8" y1="12" x2="21" y2="12"/>
-                <line x1="8" y1="18" x2="21" y2="18"/>
-                <circle cx="4" cy="6" r="0.5" fill="currentColor"/>
-                <circle cx="4" cy="12" r="0.5" fill="currentColor"/>
-                <circle cx="4" cy="18" r="0.5" fill="currentColor"/>
-            </svg>
-        </button>
-        <button id="unordered-list" class="toolbar-btn" title="Маркированный список">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="8" y1="6" x2="21" y2="6"/>
-                <line x1="8" y1="12" x2="21" y2="12"/>
-                <line x1="8" y1="18" x2="21" y2="18"/>
-                <circle cx="4" cy="6" r="1" fill="currentColor"/>
-                <circle cx="4" cy="12" r="1" fill="currentColor"/>
-                <circle cx="4" cy="18" r="1" fill="currentColor"/>
-            </svg>
-        </button>
-    </div>
-
-    <div class="toolbar-separator"></div>
-
-    <!-- Заголовки H1–H3 -->
-    <div class="toolbar-group">
-        <button id="h1-btn" class="toolbar-btn toolbar-heading-btn" title="Заголовок H1" data-heading="h1">H1</button>
-        <button id="h2-btn" class="toolbar-btn toolbar-heading-btn" title="Заголовок H2" data-heading="h2">H2</button>
-        <button id="h3-btn" class="toolbar-btn toolbar-heading-btn" title="Заголовок H3" data-heading="h3">H3</button>
-    </div>
-
-    <!-- Операции с выделенными блоками (справа, margin-left: auto) -->
-    <div class="toolbar-group group-actions" role="group" aria-label="Выделенные блоки">
-        <button type="button" id="select-all-btn" class="toolbar-btn toolbar-btn-label" title="Выделить все блоки (Ctrl+A)" aria-label="Выделить все">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-            <span>Все</span>
-        </button>
-        <button type="button" id="copy-selected-btn" class="toolbar-btn toolbar-btn-label" title="Копировать выделенные блоки (Ctrl+D)" aria-label="Копировать выделенные">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            <span>Копировать</span>
-        </button>
-        <button type="button" id="delete-selected-btn" class="toolbar-btn toolbar-btn-label toolbar-btn-danger" title="Удалить выделенные блоки (Delete)" aria-label="Удалить выделенные">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            <span>Удалить</span>
-        </button>
-    </div>
-</div>
-    
-    <div class="container">
-        <div class="sidebar">
-            <h3>Блоки и шаблоны</h3>
-            <div class="templates">
-                <!-- Категории будут добавлены через JavaScript -->
-            </div>
-        </div>
-        
-        <div class="editor-area">
-            <div class="editor" id="editor">
-
-            </div>
-        </div>
-    </div>
-    
-    <!-- Модальное окно экспорта -->
-    <div class="modal" id="export-modal">
-        <div class="modal-content export-modal-content">
-            <div class="modal-header">
-                <h2>Экспорт для публикации</h2>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div class="export-presets" role="group" aria-label="Пресеты экспорта">
-                <button type="button" class="export-preset-btn" data-export-preset="bitrix" title="Только тело статьи: без &lt;html&gt;/&lt;head&gt;, без своих CSS — вставка в Bitrix, Wiki, CMS">
-                    Чистый HTML (Bitrix / Wiki)
-                </button>
-                <button type="button" class="export-preset-btn" data-export-preset="full" title="Готовый файл: DOCTYPE, title и встроенные стили — открыть в браузере как страницу">
-                    Полный документ
-                </button>
-                <button type="button" class="export-preset-btn" data-export-preset="selected" title="Экспорт только выделенных в редакторе блоков">
-                    Только выделенное
-                </button>
-            </div>
-            <p class="export-preset-hint" id="export-preset-hint">
-                <strong>Чистый HTML</strong> — фрагмент для вставки в Bitrix/Wiki (без оболочки страницы).
-                <strong>Полный документ</strong> — самостоятельная .html-страница со стилями.
-                <strong>Только выделенное</strong> — то же, но лишь для отмеченных блоков.
-            </p>
-            <div class="export-options">
-                <div class="export-options-row">
-                    <label class="export-option">
-                        <input type="checkbox" id="export-selected-only">
-                        Только выделенные блоки
-                    </label>
-                    <label class="export-option">
-                        <input type="checkbox" id="export-full-document" checked>
-                        Полный HTML-документ (с &lt;html&gt;, &lt;head&gt;)
-                    </label>
-                </div>
-                <div class="export-options-row">
-                    <label for="export-title">Заголовок документа:</label>
-                    <input type="text" id="export-title" class="export-title-input" placeholder="Статья" value="Статья">
-                </div>
-                <div class="export-options-row export-style-mode">
-                    <span class="export-options-label">Стили:</span>
-                    <label class="export-option"><input type="radio" name="export-style-mode" value="inline" checked> Встроенные (&lt;style&gt;)</label>
-                    <label class="export-option"><input type="radio" name="export-style-mode" value="external"> Отдельный .css</label>
-                    <label class="export-option"><input type="radio" name="export-style-mode" value="none"> Без стилей</label>
-                </div>
-            </div>
-            <div class="export-view-tabs" role="tablist">
-                <button type="button" class="export-view-tab active" data-export-view="preview" role="tab" aria-selected="true">Превью</button>
-                <button type="button" class="export-view-tab" data-export-view="code" role="tab" aria-selected="false">Код HTML</button>
-            </div>
-            <div class="export-preview-wrap" id="export-preview-wrap">
-                <iframe id="export-preview-frame" class="export-preview-frame" title="Превью публикации без UI редактора"></iframe>
-                <p class="export-preview-hint">Как будет выглядеть статья у читателя (без панелей редактора).</p>
-            </div>
-            <textarea class="export-area" id="export-area" readonly hidden></textarea>
-            <div class="export-actions">
-                <button class="btn" id="copy-btn">Копировать в буфер</button>
-                <button class="btn btn-secondary" id="download-html-btn">Скачать .html</button>
-                <button class="btn btn-secondary" id="download-html-css-btn" title="Скачать HTML и отдельный CSS">Скачать .html + .css</button>
-                <button class="btn btn-secondary" id="download-zip-btn" title="HTML + изображения в ZIP">Скачать .zip</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Поиск по документу (Ctrl+F) -->
-    <div id="find-bar" class="find-bar" hidden aria-hidden="true">
-        <label class="find-bar-label" for="find-bar-input">Найти</label>
-        <input type="search" id="find-bar-input" class="find-bar-input" placeholder="Заголовок, текст, спойлер…" autocomplete="off" spellcheck="false">
-        <span id="find-bar-count" class="find-bar-count" aria-live="polite">0 / 0</span>
-        <button type="button" class="find-bar-btn" id="find-bar-prev" title="Предыдущее (Shift+Enter)">↑</button>
-        <button type="button" class="find-bar-btn" id="find-bar-next" title="Следующее (Enter)">↓</button>
-        <button type="button" class="find-bar-btn find-bar-close" id="find-bar-close" title="Закрыть (Esc)">×</button>
-    </div>
-    
-    <!-- Модальное окно импорта -->
-    <div class="modal" id="import-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Импорт HTML</h2>
-                <button class="close-modal">&times;</button>
-            </div>
-            <p class="import-hint">
-                Вставьте HTML или загрузите файл (.html / .htm). Полный документ (DOCTYPE, &lt;head&gt;, стили) будет очищен — в редактор попадёт только содержимое статьи в виде блоков. Нераспознанные фрагменты попадут как «Пользовательский HTML» или свободный текст.
-            </p>
-            <div class="import-file-row">
-                <input type="file" id="import-file-input" accept=".html,.htm,text/html,text/plain" hidden>
-                <button type="button" class="btn btn-secondary" id="import-file-btn">Выбрать файл…</button>
-                <span id="import-file-name" style="font-size: 0.9em; color: var(--text-muted, #666);"></span>
-            </div>
-            <div id="import-report" class="import-report" role="status" aria-live="polite"></div>
-            <textarea class="export-area" id="import-area" placeholder="Вставьте HTML код здесь или загрузите файл…"></textarea>
-            <button class="btn" id="import-confirm-btn">Импортировать</button>
-        </div>
-    </div>
-    
-    <!-- Модальное окно пользовательского HTML -->
-    <div class="modal" id="custom-html-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Пользовательский HTML</h2>
-                <button class="close-modal">&times;</button>
-            </div>
-            <textarea class="export-area" id="custom-html-area" placeholder="Введите ваш HTML код..."></textarea>
-            <button class="btn" id="insert-custom-html">Вставить</button>
-        </div>
-    </div>
-
-
-    <!-- Модальное окно горячих клавиш -->
-    <div class="modal" id="shortcuts-modal">
-        <div class="modal-content" style="max-width: 560px;">
-            <div class="modal-header">
-                <h2>Горячие клавиши</h2>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div class="shortcuts-list" id="shortcuts-list"></div>
-            <p class="shortcuts-hint">На Mac вместо Ctrl используйте ⌘ (Cmd). Палитра команд: <kbd>Alt+K</kbd> или кнопка «Команды» (в Chrome Ctrl+K открывает поиск браузера).</p>
-        </div>
-    </div>
-
-    <!-- Палитра команд (Ctrl+K) -->
-    <div class="modal" id="command-palette-modal">
-        <div class="modal-content command-palette-content">
-            <div class="command-palette-search-wrap">
-                <input type="text" id="command-palette-input" class="command-palette-input" placeholder="Поиск команды… (спойлер, экспорт, заголовок…)" autocomplete="off" spellcheck="false">
-                <kbd class="command-palette-esc">Esc</kbd>
-            </div>
-            <div class="command-palette-list" id="command-palette-list" role="listbox"></div>
-            <div class="command-palette-footer">
-                <span><kbd>↑</kbd><kbd>↓</kbd> навигация</span>
-                <span><kbd>Enter</kbd> выполнить</span>
-                <span><kbd>Esc</kbd> закрыть</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- История версий -->
-    <div class="modal" id="versions-modal">
-        <div class="modal-content versions-modal-content">
-            <div class="modal-header">
-                <h2>История версий</h2>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div class="versions-settings">
-                <label for="version-interval-min">Автосохранение версии при изменениях, каждые</label>
-                <div class="versions-settings-row">
-                    <input type="number" id="version-interval-min" min="1" max="1440" step="1" value="15">
-                    <span>мин.</span>
-                    <button type="button" class="btn btn-secondary" id="version-interval-save">Применить</button>
-                </div>
-                <p class="versions-settings-hint">Новая версия создаётся только если документ изменился с прошлого снимка. По умолчанию — 15 минут. Версии и кэш изображений хранятся в <strong>IndexedDB</strong> (больше лимита localStorage). Быстрое автосохранение сессии работает отдельно.</p>
-                <div id="storage-usage-panel" class="storage-usage-panel" aria-live="polite">
-                    <span class="storage-usage-muted">Подсчёт места…</span>
-                </div>
-            </div>
-            <div class="versions-actions">
-                <button type="button" class="btn" id="version-save-now">Сохранить версию сейчас</button>
-                <button type="button" class="btn btn-secondary" id="versions-compare-selected" disabled title="Отметьте две версии галочками">Сравнить выбранные</button>
-                <button type="button" class="btn btn-secondary" id="versions-clear-all">Очистить историю</button>
-            </div>
-            <p class="versions-compare-hint">Отметьте две версии галочками и нажмите «Сравнить выбранные», либо у строки — «С текущим».</p>
-            <div class="versions-list" id="versions-list">
-                <p class="versions-empty">Пока нет сохранённых версий.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Сравнение версий -->
-    <div class="modal" id="version-compare-modal">
-        <div class="modal-content version-compare-modal-content">
-            <div class="modal-header">
-                <h2>Сравнение версий</h2>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div class="version-compare-meta" id="version-compare-meta"></div>
-            <div class="version-compare-stats" id="version-compare-stats"></div>
-            <div class="version-compare-toolbar">
-                <button type="button" class="btn btn-secondary active" id="compare-view-visual" data-view="visual">Визуально</button>
-                <button type="button" class="btn btn-secondary" id="compare-view-unified" data-view="unified">Текст (diff)</button>
-            </div>
-            <div class="version-compare-legend" id="version-compare-legend">
-                <span class="legend-item legend-del">Удалено</span>
-                <span class="legend-item legend-add">Добавлено</span>
-                <span class="legend-item legend-mod">Изменено</span>
-                <span class="legend-item legend-eq">Без изменений</span>
-            </div>
-            <div class="version-compare-body" id="version-compare-body"></div>
-        </div>
-    </div>
-
-    <!-- Модальное окно передачи материалов -->
-    <div class="modal" id="publish-modal">
-        <div class="modal-content publish-modal-content">
-            <div class="modal-header">
-                <h2>Передать материалы</h2>
-                <button type="button" class="close-modal" aria-label="Закрыть">&times;</button>
-            </div>
-            <div class="publish-modal-body">
-                <div class="publish-tabs">
-                    <button type="button" class="publish-tab active" data-tab="yougile">YouGile</button>
-                    <button type="button" class="publish-tab" data-tab="email">Почта</button>
-                </div>
-
-                <div class="publish-panel active" id="panel-yougile">
-                    <p class="publish-hint">Создаёт задачу в YouGile и прикрепляет HTML статьи и дополнительные файлы. Ключ API хранится только в вашем браузере.</p>
-
-                    <div class="form-group">
-                        <label for="yg-api-key">API-ключ YouGile</label>
-                        <input type="password" id="yg-api-key" placeholder="Bearer-токен" autocomplete="off">
-                        <small>
-                            <a href="reg_api.html" target="_blank" rel="noopener">Создать / посмотреть ключи</a>
-                            · <a href="https://ru.yougile.com/api-v2" target="_blank" rel="noopener">Документация</a>
-                        </small>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="yg-column-id">Колонка (columnId)</label>
-                        <input type="text" id="yg-column-id" placeholder="ID колонки, например fefbc00f-3870-4f52-…" autocomplete="off">
-                        <div id="yg-column-name" class="yg-column-name" aria-live="polite"></div>
-                        <small>Недавние колонки:</small>
-                        <div id="yg-recent-columns" class="yg-recent-columns"></div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="yg-title">Название задачи</label>
-                        <input type="text" id="yg-title" placeholder="Статья: …">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="yg-pubs">Ссылки на публикации <span class="optional">(опционально)</span></label>
-                        <textarea id="yg-pubs" rows="2" placeholder="https://… — черновик&#10;https://… — финальная версия"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="yg-note">Комментарий автору <span class="optional">(опционально)</span></label>
-                        <textarea id="yg-note" rows="2" placeholder="Что нужно доработать, дедлайн и т.п."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="yg-extra-files">Доп. файлы / скриншоты <span class="optional">(опционально)</span></label>
-                        <input type="file" id="yg-extra-files" multiple accept="image/*,.pdf,.zip,.doc,.docx,.txt,.md">
-                        <small>HTML статьи прикрепится автоматически. Можно добавить скриншоты и другие файлы.</small>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" class="btn" id="yg-create-task">Создать задачу + файлы</button>
-                        <button type="button" class="btn btn-secondary" id="yg-copy-curl">Скопировать curl</button>
-                    </div>
-                    <div id="yg-result" class="publish-result" hidden></div>
-                </div>
-
-                <div class="publish-panel" id="panel-email">
-                    <p class="publish-hint">Откроет почтовый клиент. HTML-файл нужно прикрепить вручную — браузер не может приложить файл к mail. Скачайте его кнопкой ниже.</p>
-
-                    <div class="form-group">
-                        <label for="em-to">Кому (email)</label>
-                        <input type="email" id="em-to" placeholder="author@example.com" multiple>
-                    </div>
-                    <div class="form-group">
-                        <label for="em-subject">Тема</label>
-                        <input type="text" id="em-subject" placeholder="Материал статьи">
-                    </div>
-                    <div class="form-group">
-                        <label for="em-pubs">Ссылки на публикации <span class="optional">(опционально)</span></label>
-                        <textarea id="em-pubs" rows="2" placeholder="По одной ссылке на строку"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="em-note">Текст письма / комментарий</label>
-                        <textarea id="em-note" rows="4" placeholder="Здравствуйте! Передаю материал статьи…"></textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn" id="em-download-html">Скачать HTML статьи</button>
-                        <button type="button" class="btn btn-secondary" id="em-open-mailto">Открыть письмо</button>
-                    </div>
-                    <div id="em-result" class="publish-result" hidden></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="wiki-modal">
-        <div class="modal-content wiki-modal-content">
-            <div class="modal-header">
-                <h2>Wiki — Konstryktor</h2>
-                <button type="button" class="close-modal" aria-label="Закрыть">&times;</button>
-            </div>
-            <nav class="wiki-nav" aria-label="Разделы справки">
-                <a href="#wiki-about" class="wiki-nav-link is-active">Что это</a>
-                <a href="#wiki-start" class="wiki-nav-link">Старт</a>
-                <a href="#wiki-header" class="wiki-nav-link">Шапка</a>
-                <a href="#wiki-export" class="wiki-nav-link">Экспорт</a>
-                <a href="#wiki-kb" class="wiki-nav-link">База знаний</a>
-            </nav>
-            <div class="wiki-body" id="wiki-body-scroll">
-                <section id="wiki-about" class="wiki-section">
-                    <h3>Что это</h3>
-                    <p>Блочный визуальный HTML-редактор для инструкций и статей (в т.ч. по 1С): спойлеры, предупреждения, шаги, код, таблицы, изображения, ZIP-экспорт и импорт HTML.</p>
-                </section>
-                <section id="wiki-start" class="wiki-section">
-                    <h3>Быстрый старт</h3>
-                    <ul>
-                        <li>Перетащите блок из левой панели или нажмите <kbd>/</kbd> в редакторе.</li>
-                        <li>Клик по блоку — выделить; чекбокс слева у блока или <kbd>Ctrl</kbd>+клик — несколько; в toolbar: Все / Копировать / Удалить.</li>
-                        <li><kbd>Ctrl+A</kbd> — все блоки; <kbd>Delete</kbd> — удалить выделенные.</li>
-                        <li><strong>Экспорт</strong> — HTML / HTML+CSS / ZIP с картинками. <strong>Импорт</strong> — файл или вставка кода.</li>
-                        <li><kbd>Alt+K</kbd> — палитра команд; <kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd> — отмена / повтор.</li>
-                    </ul>
-                </section>
-                <section id="wiki-header" class="wiki-section">
-                    <h3>Кнопки шапки и toolbar</h3>
-                    <ul>
-                        <li><strong>Шапка · История</strong> — Отменить, Повторить, Версии, Восстановить сессию.</li>
-                        <li><strong>Шапка · Вид</strong> — Тема, Команды, Клавиши.</li>
-                        <li><strong>Шапка · Документ</strong> — База знаний, В БЗ, Импорт, Экспорт, Передать (YouGile/почта), Очистить.</li>
-                        <li><strong>Toolbar</strong> — форматирование текста и операции с выделенными блоками (Все / Копировать / Удалить).</li>
-                    </ul>
-                </section>
-                <section id="wiki-export" class="wiki-section">
-                    <h3>Экспорт и импорт</h3>
-                    <p>Экспорт отдаёт чистую разметку без UI редактора. Можно экспортировать только выделенные блоки. ZIP кладёт картинки в <code>images/</code> с относительными путями.</p>
-                    <p>Импорт принимает полный HTML-документ или фрагмент: body извлекается, legacy-структуры (details, warning, шаги) превращаются в блоки редактора.</p>
-                </section>
-                <section id="wiki-kb" class="wiki-section">
-                    <h3>База знаний</h3>
-                    <p>Локальная БЗ в этом браузере (без облака). Данные в <code>localStorage</code>.</p>
-                    <ul>
-                        <li><strong>База знаний</strong> в шапке — открывает страницу <code>kb.html</code>: дерево папок, поиск, избранное, чтение статей.</li>
-                        <li><strong>В БЗ</strong> — сохранить текущий документ как статью (название, папка, избранное; можно обновить существующую или сохранить как новую).</li>
-                        <li>На странице БЗ: меню <strong>Файл</strong> (печать/PDF, JSON, настройки), кнопка <strong>История</strong> у статьи (версии), подсветка кода в просмотре.</li>
-                        <li>Из статьи: <strong>В редактор</strong> — загрузка HTML обратно в Konstryktor для правки.</li>
-                    </ul>
-                </section>
-            </div>
-        </div>
-    </div>
-
-
-    <div class="modal" id="link-modal">
-        <div class="modal-content" style="max-width:420px;">
-            <div class="modal-header">
-                <h2 id="link-modal-title">Ссылка</h2>
-                <button type="button" class="close-modal" aria-label="Закрыть">&times;</button>
-            </div>
-            <div style="padding:16px 20px 20px;">
-                <div class="kb-form-row">
-                    <label for="link-text-input">Текст</label>
-                    <input type="text" id="link-text-input" class="kb-input" placeholder="Текст ссылки" style="width:100%;box-sizing:border-box">
-                </div>
-                <div class="kb-form-row">
-                    <label for="link-url-input">Адрес (URL или #якорь)</label>
-                    <input type="text" id="link-url-input" class="kb-input" placeholder="https://… или #section-1" style="width:100%;box-sizing:border-box">
-                </div>
-                <div class="kb-publish-actions" style="justify-content:space-between">
-                    <button type="button" class="btn btn-secondary" id="link-remove-btn" hidden>Удалить ссылку</button>
-                    <span style="flex:1"></span>
-                    <button type="button" class="btn btn-secondary close-modal">Отмена</button>
-                    <button type="button" class="btn" id="link-apply-btn">Применить</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Публикация в локальную БЗ (просмотр — отдельная страница kb.html) -->
-    <div class="modal" id="kb-publish-modal">
-        <div class="modal-content kb-publish-modal-content">
-            <div class="modal-header">
-                <h2>Сохранить в базу знаний</h2>
-                <button type="button" class="close-modal" aria-label="Закрыть">&times;</button>
-            </div>
-            <div class="kb-publish-panel">
-                <p class="kb-publish-lead">Текущий документ сохранится как статья локальной базы знаний (данные только в этом браузере).</p>
-                <div class="kb-form-row">
-                    <label for="kb-publish-title">Название статьи</label>
-                    <input type="text" id="kb-publish-title" class="kb-input" placeholder="Название" maxlength="200">
-                </div>
-                <div class="kb-form-row">
-                    <label for="kb-publish-folder">Папка</label>
-                    <select id="kb-publish-folder" class="kb-input"></select>
-                </div>
-                <div class="kb-form-row kb-form-row-inline">
-                    <label><input type="checkbox" id="kb-publish-favorite"> В избранное</label>
-                </div>
-                <div class="kb-form-row kb-form-row-inline" id="kb-publish-as-new-row" hidden>
-                    <label><input type="checkbox" id="kb-publish-as-new"> Сохранить как новую статью</label>
-                </div>
-                <p id="kb-publish-update-hint" class="kb-muted" hidden></p>
-                <div class="kb-publish-actions">
-                    <button type="button" class="btn btn-secondary" id="kb-publish-open-page">Открыть БЗ</button>
-                    <button type="button" class="btn btn-secondary" id="kb-publish-cancel">Отмена</button>
-                    <button type="button" class="btn" id="kb-publish-confirm">Сохранить</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-<!-- core -->
-<script src="js/core/idb-storage.js"></script>
-<script src="js/core/history.js"></script>
-<script src="js/core/autosave.js"></script>
-<script src="js/core/empty-state.js"></script>
-<!-- ui (notifications early — used everywhere) -->
-<script src="js/ui/notifications.js"></script>
-<!-- drag -->
-<script src="js/drag/block-drag.js"></script>
-<!-- blocks -->
-<script src="js/blocks/setup.js"></script>
-<script src="js/blocks/factories.js"></script>
-<script src="js/templates.js"></script>
-<script src="js/blocks/user-templates.js"></script>
-<script src="js/drag/sidebar-drag.js"></script>
-<!-- export -->
-<script src="lib/jszip.min.js"></script>
-<script src="js/export/builder.js"></script>
-<script src="js/export/converter.js"></script>
-<script src="js/editor.js"></script>
-<script src="js/integrations.js"></script>
-<!-- knowledge base -->
-<script src="js/kb/knowledge-base.js"></script>
-<!-- ui command palette (after insertTemplate / exportHTML / etc.) -->
-<script src="js/ui/command-palette.js"></script>
-<script src="js/ui/find-bar.js"></script>
-<script src="js/main.js"></script>
+    <section class="features" aria-label="Возможности">
+      <h2>Что умеет редактор</h2>
+      <ul>
+        <li>
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </span>
+          <span>Блоки: спойлеры, предупреждения, шаги, код, таблицы, FAQ, цитаты</span>
+        </li>
+        <li>
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          </span>
+          <span>Изображения: файл, URL, вставка из буфера, drag&amp;drop, ZIP-экспорт</span>
+        </li>
+        <li>
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </span>
+          <span>Локальная база знаний: дерево, поиск, избранное, история версий</span>
+        </li>
+        <li>
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </span>
+          <span>Импорт HTML, пресеты экспорта (Bitrix/Wiki), печать / PDF, тёмная тема</span>
+        </li>
+      </ul>
+    </section>
+    <footer class="footer">
+      Chrome и&nbsp;Edge · Manifest V3 · данные только локально
+    </footer>
+  </main>
 </body>
 </html>
