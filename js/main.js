@@ -58,6 +58,15 @@ function updateThemeToggleLabel() {
 
 // Инициализация редактора
 function initializeEditor() {
+    try {
+        if (/[?&]new=1(?:&|$)/.test(location.search || '')) {
+            sessionStorage.removeItem('konstructor_kb_current_article');
+            sessionStorage.removeItem('konstructor_kb_open_article');
+            if (window.history && history.replaceState) {
+                history.replaceState(null, '', location.pathname + (location.hash || ''));
+            }
+        }
+    } catch (e) { /* ignore */ }
     const editor = document.getElementById('editor');
     if (!editor) return;
 
@@ -246,22 +255,16 @@ function setupFreeTextEditing(editor) {
         const target = e.target.closest('[contenteditable="true"]');
         if (!target || !editor.contains(target)) return;
 
-        // Slash-меню: / в начале пустого блока или после пробела
+        // Slash-меню: только в пустом поле (не мешает обычной «/» в тексте)
         if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
             const sel = window.getSelection();
-            if (sel && sel.isCollapsed) {
-                const text = target.textContent || '';
-                const offset = sel.anchorOffset;
-                // в начале или после пробела / переноса
-                const before = text.slice(0, offset);
-                if (before === '' || /[\s\n]$/.test(before) || isEmptyFreeText(target)) {
-                    e.preventDefault();
-                    const rect = sel.rangeCount ? sel.getRangeAt(0).getBoundingClientRect() : target.getBoundingClientRect();
-                    const x = rect.left || rect.x || 100;
-                    const y = (rect.bottom || rect.y + 20) || 100;
-                    openSlashMenuAt(x, y, target.closest('.block'));
-                    return;
-                }
+            if (sel && sel.isCollapsed && shouldOpenSlashOnSlashKey(target)) {
+                e.preventDefault();
+                const rect = sel.rangeCount ? sel.getRangeAt(0).getBoundingClientRect() : target.getBoundingClientRect();
+                const x = rect.left || rect.x || 100;
+                const y = (rect.bottom || rect.y + 20) || 100;
+                openSlashMenuAt(x, y, target.closest('.block'));
+                return;
             }
         }
 
@@ -314,13 +317,161 @@ function setupFreeTextEditing(editor) {
         }
     });
 
-    // Вставка из буфера — как простой текст в free-text
+    // Вставка из буфера: картинки (файлы/скриншоты) → блок изображения;
+    // URL картинки → блок с src; иначе plain text в free-text
     editor.addEventListener('paste', function(e) {
+        const cd = e.clipboardData || window.clipboardData;
+        if (!cd) return;
+
+        // 1) Файлы изображений из буфера (скриншот, Copy image)
+        const files = cd.files && cd.files.length ? Array.from(cd.files) : [];
+        const imageFiles = files.filter(function(f) {
+            return f && f.type && f.type.startsWith('image/');
+        });
+        if (imageFiles.length) {
+            e.preventDefault();
+            imageFiles.forEach(function(file) {
+                const reader = new FileReader();
+                reader.onload = function() {
+                    if (typeof insertImageFromDataUrl === 'function') {
+                        insertImageFromDataUrl(reader.result, file.name || 'paste.png');
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            return;
+        }
+
+        // items: image/* без files (некоторые браузеры)
+        if (cd.items) {
+            const imgItems = Array.from(cd.items).filter(function(it) {
+                return it.kind === 'file' && it.type && it.type.startsWith('image/');
+            });
+            if (imgItems.length) {
+                e.preventDefault();
+                imgItems.forEach(function(it) {
+                    const file = it.getAsFile();
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = function() {
+                        if (typeof insertImageFromDataUrl === 'function') {
+                            insertImageFromDataUrl(reader.result, file.name || 'paste.png');
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                });
+                return;
+            }
+        }
+
+        const text = (cd.getData('text/plain') || '').trim();
+        // 2) Текст = URL картинки
+        if (text && isImageUrlString(text) && typeof insertImageFromUrl === 'function') {
+            e.preventDefault();
+            insertImageFromUrl(text);
+            return;
+        }
+
+        // 3) Обычный текст только в free-text
         const target = e.target.closest('.free-text');
         if (!target) return;
         e.preventDefault();
-        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-        document.execCommand('insertText', false, text);
+        document.execCommand('insertText', false, cd.getData('text/plain') || '');
+    });
+
+    // Drag&drop картинок прямо в редактор (не только в upload-zone блока)
+    setupEditorImageDrop(editor);
+}
+
+/** Похож ли текст на URL изображения */
+function isImageUrlString(str) {
+    if (!str || typeof str !== 'string') return false;
+    const s = str.trim();
+    if (/^data:image\//i.test(s)) return true;
+    if (!/^https?:\/\//i.test(s)) return false;
+    // расширение или типичные CDN/пути
+    if (/\.(png|jpe?g|gif|webp|svg|bmp|avif)(\?|#|$)/i.test(s)) return true;
+    if (/\/wp-content\/uploads\//i.test(s)) return true;
+    if (/\/images?\//i.test(s) && !/\.(html?|php|aspx?)(\?|#|$)/i.test(s)) return true;
+    return false;
+}
+
+/**
+ * Drop файлов/URL изображений на весь #editor
+ */
+function setupEditorImageDrop(editor) {
+    if (!editor || editor.dataset.imageDropBound === '1') return;
+    editor.dataset.imageDropBound = '1';
+
+    function hasImagePayload(dt) {
+        if (!dt) return false;
+        if (dt.files && dt.files.length) {
+            for (let i = 0; i < dt.files.length; i++) {
+                if (dt.files[i].type && dt.files[i].type.startsWith('image/')) return true;
+            }
+        }
+        const uri = (dt.getData && (dt.getData('text/uri-list') || dt.getData('text/plain'))) || '';
+        if (uri && isImageUrlString(uri.trim().split('\n')[0])) return true;
+        return false;
+    }
+
+    editor.addEventListener('dragover', function(e) {
+        if (!e.dataTransfer) return;
+        // не мешаем drag блоков
+        if (e.dataTransfer.types && Array.from(e.dataTransfer.types).indexOf('Files') === -1 &&
+            Array.from(e.dataTransfer.types).indexOf('text/uri-list') === -1) {
+            return;
+        }
+        if (hasImagePayload(e.dataTransfer) || (e.dataTransfer.types && Array.from(e.dataTransfer.types).indexOf('Files') !== -1)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            editor.classList.add('editor-image-dragover');
+        }
+    });
+
+    editor.addEventListener('dragleave', function(e) {
+        if (e.target === editor || !editor.contains(e.relatedTarget)) {
+            editor.classList.remove('editor-image-dragover');
+        }
+    });
+
+    editor.addEventListener('drop', function(e) {
+        const dt = e.dataTransfer;
+        if (!dt) return;
+
+        // Drop на upload-zone блока обрабатывается там
+        if (e.target.closest && e.target.closest('.image-upload-zone')) return;
+
+        const files = dt.files && dt.files.length ? Array.from(dt.files) : [];
+        const imageFiles = files.filter(function(f) {
+            return f && f.type && f.type.startsWith('image/');
+        });
+
+        if (imageFiles.length) {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.classList.remove('editor-image-dragover');
+            imageFiles.forEach(function(file) {
+                const reader = new FileReader();
+                reader.onload = function() {
+                    if (typeof insertImageFromDataUrl === 'function') {
+                        insertImageFromDataUrl(reader.result, file.name || 'drop.png');
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            return;
+        }
+
+        const uri = ((dt.getData('text/uri-list') || dt.getData('text/plain') || '').trim().split('\n')[0] || '').trim();
+        if (uri && isImageUrlString(uri) && typeof insertImageFromUrl === 'function') {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.classList.remove('editor-image-dragover');
+            insertImageFromUrl(uri);
+        } else {
+            editor.classList.remove('editor-image-dragover');
+        }
     });
 }
 
@@ -338,11 +489,30 @@ const SLASH_BLOCK_TYPES = [
     { id: 'quote', name: 'Цитата', desc: 'Выделение цитаты', icon: '❝' },
     { id: 'table', name: 'Таблица', desc: 'Таблица 2×2–5×5', icon: '▦' },
     { id: 'image', name: 'Изображение', desc: 'Вставка картинки', icon: '🖼' },
+    { id: 'image-caption', name: 'Изображение с подписью', desc: 'Скриншот с описанием', icon: '🖼' },
     { id: 'divider', name: 'Разделитель', desc: 'Горизонтальная линия', icon: '—' },
     { id: 'faq', name: 'FAQ', desc: 'Вопросы и ответы', icon: '?' },
     { id: 'numbered', name: 'Нумерованный', desc: 'Блок с номером', icon: '①' },
+    { id: 'toc', name: 'Оглавление', desc: 'Список ссылок на разделы', icon: '≡' },
     { id: 'video', name: 'Видео', desc: 'YouTube / RuTube', icon: '▶' },
+    { id: 'download-file', name: 'Скачать файл', desc: 'Кнопка скачивания', icon: '⬇' },
+    { id: 'link-buttons', name: 'Кнопки-ссылки', desc: 'Группа кнопок-ссылок', icon: '🔗' },
+    { id: '1c-configuration', name: 'Конфигурация 1С', desc: 'Варианты версий 1С', icon: '🗄' },
+    { id: 'glossary', name: 'Термины', desc: 'Определения терминов', icon: '📖' },
+    { id: 'type-comparison', name: 'Сравнение типов', desc: 'Сравнение вариантов', icon: '⊞' },
+    { id: 'developer-note', name: 'Примечание разработчика', desc: 'Технические заметки', icon: '💻' },
+    { id: 'before-after', name: 'До / После', desc: 'Сравнение двух вариантов', icon: '⇔' },
+    { id: 'meta-author', name: 'Автор / дата / теги', desc: 'Метаданные статьи', icon: '👤' },
+    { id: 'custom', name: 'Свой HTML', desc: 'Произвольный HTML-код', icon: '</>' },
 ];
+
+/** Built-in + пользовательские шаблоны для slash-меню */
+function getSlashBlockTypes() {
+    const user = (window.UserTemplates && typeof window.UserTemplates.getSlashEntries === 'function')
+        ? window.UserTemplates.getSlashEntries()
+        : [];
+    return SLASH_BLOCK_TYPES.concat(user);
+}
 
 let slashMenuEl = null;
 let slashActiveIndex = 0;
@@ -398,7 +568,7 @@ function openSlashMenuAt(x, y, beforeBlock) {
 
     function renderList() {
         const q = slashFilter.trim().toLowerCase();
-        const items = SLASH_BLOCK_TYPES.filter(t =>
+        const items = getSlashBlockTypes().filter(t =>
             !q || t.name.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q) || t.id.includes(q)
         );
         if (!items.length) {
@@ -499,6 +669,21 @@ function chooseSlashItem(typeId) {
     updateEditorEmptyState();
 }
 
+/** Slash только если поле пустое / placeholder — иначе «/» печатается как символ */
+function shouldOpenSlashOnSlashKey(el) {
+    if (!el) return false;
+    const raw = (el.textContent || '').replace(/\u00a0/g, ' ').replace(/\u200b/g, '').trim();
+    if (!raw || raw === '\n') return true;
+    const placeholders = [
+        'Начните писать…',
+        'Начните писать...',
+        'Введите текст',
+        'Текст',
+        'Начните писать'
+    ];
+    return placeholders.some(p => raw === p);
+}
+
 function isEmptyFreeText(el) {
     const t = (el.textContent || '').replace(/\u00a0/g, ' ').trim();
     return t === '' || t === '\n';
@@ -565,12 +750,40 @@ function setupEventListeners() {
             exportHTML();
         });
     }
+    const exportQuick = document.getElementById('export-quick');
+    if (exportQuick) {
+        exportQuick.addEventListener('click', function() {
+            exportHTML();
+        });
+    }
+    const printBtn = document.getElementById('print-btn');
+    if (printBtn) {
+        printBtn.addEventListener('click', function() {
+            if (typeof printEditorDocument === 'function') printEditorDocument();
+        });
+    }
+    const kbPublishQuick = document.getElementById('kb-publish-quick');
+    if (kbPublishQuick) {
+        kbPublishQuick.addEventListener('click', function() {
+            if (typeof openPublishToKb === 'function') openPublishToKb();
+            else {
+                const b = document.getElementById('kb-publish-btn');
+                if (b) b.click();
+            }
+        });
+    }
+    setupHeaderMenus();
     
     const importBtn = document.getElementById('import-btn');
     if (importBtn) {
         importBtn.addEventListener('click', function() {
             const importModal = document.getElementById('import-modal');
             if (importModal) importModal.classList.add('active');
+            const reportEl = document.getElementById('import-report');
+            if (reportEl) {
+                reportEl.className = 'import-report';
+                reportEl.innerHTML = '';
+            }
         });
     }
     
@@ -658,6 +871,9 @@ function setupEventListeners() {
     document.querySelectorAll('input[name="export-style-mode"]').forEach(function(radio) {
         radio.addEventListener('change', function() { refreshExportPreview(); });
     });
+    if (typeof setupExportPresetsUI === 'function') {
+        setupExportPresetsUI();
+    }
     
     const importConfirmBtn = document.getElementById('import-confirm-btn');
     if (importConfirmBtn) {
@@ -697,6 +913,225 @@ function setupEventListeners() {
     }
 }
 
+
+/** Редактор ссылок: создать / изменить / снять */
+var _linkEditorRange = null;
+var _linkEditorAnchor = null;
+
+function getSelectionLink() {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return null;
+    let node = sel.anchorNode;
+    if (node && node.nodeType === 3) node = node.parentElement;
+    if (!node || !node.closest) return null;
+    const a = node.closest('a');
+    if (!a || !a.closest('#editor')) return null;
+    return a;
+}
+
+function openLinkEditor() {
+    const modal = document.getElementById('link-modal');
+    const textInput = document.getElementById('link-text-input');
+    const urlInput = document.getElementById('link-url-input');
+    const removeBtn = document.getElementById('link-remove-btn');
+    const titleEl = document.getElementById('link-modal-title');
+    if (!modal || !textInput || !urlInput) {
+        const url = prompt('Введите URL:');
+        if (url) document.execCommand('createLink', false, url);
+        return;
+    }
+
+    const sel = window.getSelection();
+    _linkEditorAnchor = getSelectionLink();
+    _linkEditorRange = null;
+    if (sel && sel.rangeCount) {
+        try { _linkEditorRange = sel.getRangeAt(0).cloneRange(); } catch (e) { _linkEditorRange = null; }
+    }
+
+    if (_linkEditorAnchor) {
+        if (titleEl) titleEl.textContent = 'Изменить ссылку';
+        textInput.value = (_linkEditorAnchor.textContent || '').trim();
+        urlInput.value = _linkEditorAnchor.getAttribute('href') || '';
+        if (removeBtn) removeBtn.hidden = false;
+    } else {
+        if (titleEl) titleEl.textContent = 'Вставить ссылку';
+        textInput.value = (sel && !sel.isCollapsed) ? sel.toString() : '';
+        urlInput.value = '';
+        if (removeBtn) removeBtn.hidden = true;
+    }
+
+    modal.classList.add('active');
+    setTimeout(function() { urlInput.focus(); urlInput.select(); }, 40);
+}
+
+function closeLinkEditor() {
+    const modal = document.getElementById('link-modal');
+    if (modal) modal.classList.remove('active');
+    _linkEditorRange = null;
+    _linkEditorAnchor = null;
+}
+
+function applyLinkEditor() {
+    const textInput = document.getElementById('link-text-input');
+    const urlInput = document.getElementById('link-url-input');
+    let url = (urlInput && urlInput.value || '').trim();
+    let text = (textInput && textInput.value || '').trim();
+    if (!url) {
+        if (typeof showNotification === 'function') showNotification('Укажите адрес ссылки', 'warning');
+        if (urlInput) urlInput.focus();
+        return;
+    }
+    // якорь без # — добавим
+    if (/^[A-Za-z][\w\-\:\.]*$/.test(url) && url.indexOf('/') === -1 && url.indexOf('.') === -1) {
+        url = '#' + url;
+    }
+
+    try {
+        if (_linkEditorAnchor && document.contains(_linkEditorAnchor)) {
+            _linkEditorAnchor.setAttribute('href', url);
+            if (text) _linkEditorAnchor.textContent = text;
+            closeLinkEditor();
+            if (typeof showNotification === 'function') showNotification('Ссылка обновлена', 'success');
+            return;
+        }
+
+        const a = document.createElement('a');
+        a.setAttribute('href', url);
+        a.textContent = text || url;
+
+        const sel = window.getSelection();
+        let range = null;
+        if (_linkEditorRange) {
+            try {
+                // range may be stale after focus move
+                range = _linkEditorRange;
+                const test = range.commonAncestorContainer;
+                if (!test || !document.contains(test.nodeType === 1 ? test : test.parentNode)) {
+                    range = null;
+                }
+            } catch (err) {
+                range = null;
+            }
+        }
+
+        if (range) {
+            try {
+                if (sel) {
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+                if (sel && !sel.isCollapsed) {
+                    document.execCommand('createLink', false, url);
+                    const existing = getSelectionLink();
+                    if (existing) {
+                        existing.setAttribute('href', url);
+                        if (text) existing.textContent = text;
+                    }
+                } else {
+                    range.deleteContents();
+                    range.insertNode(a);
+                }
+            } catch (err2) {
+                range = null;
+            }
+        }
+
+        if (!range) {
+            // fallback: insert into focused contenteditable or last free-text in editor
+            const editor = document.getElementById('editor');
+            let editable = document.activeElement && document.activeElement.closest &&
+                document.activeElement.closest('#editor [contenteditable="true"]');
+            if (!editable && editor) {
+                editable = editor.querySelector('[contenteditable="true"]');
+            }
+            if (editable) {
+                editable.focus();
+                document.execCommand('insertHTML', false, a.outerHTML);
+            } else if (editor) {
+                const p = document.createElement('p');
+                p.appendChild(a);
+                editor.appendChild(p);
+            }
+        }
+
+        closeLinkEditor();
+        if (typeof showNotification === 'function') showNotification('Ссылка вставлена', 'success');
+    } catch (e) {
+        console.error('applyLinkEditor', e);
+        if (typeof showNotification === 'function') showNotification('Не удалось применить ссылку', 'error');
+    }
+}
+
+function removeLinkEditor() {
+    if (_linkEditorAnchor) {
+        const parent = _linkEditorAnchor.parentNode;
+        while (_linkEditorAnchor.firstChild) parent.insertBefore(_linkEditorAnchor.firstChild, _linkEditorAnchor);
+        parent.removeChild(_linkEditorAnchor);
+        closeLinkEditor();
+        if (typeof showNotification === 'function') showNotification('Ссылка удалена', 'info');
+        return;
+    }
+    document.execCommand('unlink', false, null);
+    closeLinkEditor();
+}
+
+function setupLinkEditorModal() {
+    const modal = document.getElementById('link-modal');
+    if (!modal) return;
+    const applyBtn = document.getElementById('link-apply-btn');
+    const removeBtn = document.getElementById('link-remove-btn');
+    if (applyBtn) {
+        applyBtn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            applyLinkEditor();
+        };
+    }
+    if (removeBtn) {
+        removeBtn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            removeLinkEditor();
+        };
+    }
+    modal.querySelectorAll('.close-modal').forEach(function(btn) {
+        btn.addEventListener('click', closeLinkEditor);
+    });
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeLinkEditor();
+    });
+    // Ctrl+click on link in editor → edit
+    const editor = document.getElementById('editor');
+    if (editor && !editor.dataset.linkEditBound) {
+        editor.dataset.linkEditBound = '1';
+        editor.addEventListener('click', function(e) {
+            const a = e.target.closest && e.target.closest('a');
+            if (!a || !editor.contains(a)) return;
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                const sel = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(a);
+                sel.removeAllRanges();
+                sel.addRange(range);
+                openLinkEditor();
+            }
+        });
+        editor.addEventListener('dblclick', function(e) {
+            const a = e.target.closest && e.target.closest('a');
+            if (!a || !editor.contains(a)) return;
+            e.preventDefault();
+            const sel = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(a);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            openLinkEditor();
+        });
+    }
+}
+
+
 // Настройка кнопок форматирования
 function setupFormattingButtons() {
     const commands = {
@@ -719,8 +1154,7 @@ function setupFormattingButtons() {
         if (button) {
             button.addEventListener('click', function() {
                 if (command === 'createLink') {
-                    const url = prompt('Введите URL:');
-                    if (url) document.execCommand(command, false, url);
+                    openLinkEditor();
                 } else if (command === 'insertImage') {
                     const url = prompt('Введите URL изображения:');
                     if (url) document.execCommand(command, false, url);
@@ -892,6 +1326,50 @@ function applyFontFamilyToSelection(font) {
     document.execCommand('fontName', false, font);
 }
 
+
+function setupHeaderMenus() {
+    const menus = document.querySelectorAll('.header-menu');
+    if (!menus.length) return;
+
+    function closeAll(except) {
+        menus.forEach(function(m) {
+            if (except && m === except) return;
+            m.classList.remove('is-open');
+            const btn = m.querySelector('.header-menu-btn');
+            const panel = m.querySelector('.header-menu-panel');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+            if (panel) panel.hidden = true;
+        });
+    }
+
+    menus.forEach(function(menu) {
+        const btn = menu.querySelector('.header-menu-btn');
+        const panel = menu.querySelector('.header-menu-panel');
+        if (!btn || !panel) return;
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const open = menu.classList.contains('is-open');
+            closeAll();
+            if (!open) {
+                menu.classList.add('is-open');
+                btn.setAttribute('aria-expanded', 'true');
+                panel.hidden = false;
+            }
+        });
+        panel.querySelectorAll('.header-menu-item').forEach(function(item) {
+            item.addEventListener('click', function() {
+                // leave a tick so other handlers run, then close
+                setTimeout(function() { closeAll(); }, 0);
+            });
+        });
+    });
+
+    document.addEventListener('click', function() { closeAll(); });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeAll();
+    });
+}
+
 function setupToolbarDropdowns() {
     const dropdowns = document.querySelectorAll('.toolbar-dropdown');
     if (!dropdowns.length) return;
@@ -1024,6 +1502,27 @@ function insertImageFromDataUrl(dataUrl, filename) {
     const safeName = (filename || 'image.png').replace(/[^\w.\-а-яА-ЯёЁ]+/gi, '_');
     const altText = safeName.replace(/_/g, ' ').replace(/\.[^.]+$/, '') || 'Изображение';
 
+    // Кэш в IndexedDB (не блокирует UI; src остаётся data URL для экспорта/ZIP)
+    let idbImageId = null;
+    const idb = window.KonstructorIDB;
+    if (idb && typeof idb.storeDataUrlImage === 'function' && /^data:image\//i.test(dataUrl)) {
+        idb.storeDataUrlImage(dataUrl, safeName).then(function (id) {
+            idbImageId = id;
+            if (id) {
+                const imgs = editor.querySelectorAll('img[src="' + dataUrl.slice(0, 64) + '"], img[data-export-filename="' + safeName + '"]');
+                // привязка по самому свежему img с этим filename
+                const all = editor.querySelectorAll('img[data-export-filename="' + safeName + '"], img.image-element');
+                if (all.length) {
+                    const last = all[all.length - 1];
+                    if (last && last.src && last.src.indexOf('data:image') === 0) {
+                        last.setAttribute('data-idb-image', id);
+                    }
+                }
+                refreshStorageIndicator();
+            }
+        }).catch(function () { /* ignore */ });
+    }
+
     // Предпочитаем блок «Изображение» — удобнее для миграции и ZIP
     if (typeof insertTemplate === 'function') {
         insertTemplate('image');
@@ -1032,22 +1531,20 @@ function insertImageFromDataUrl(dataUrl, filename) {
         if (block) {
             if (typeof setupImageBlock === 'function') setupImageBlock(block);
             const img = block.querySelector('img.image-element, img');
-            if (img) {
+            if (img && typeof revealImageInBlock === 'function') {
+                revealImageInBlock(block, img, dataUrl, {
+                    filename: safeName,
+                    setExportName: true,
+                    alt: altText
+                });
+            } else if (img) {
                 img.src = dataUrl;
                 img.hidden = false;
                 img.removeAttribute('hidden');
                 img.setAttribute('data-export-filename', safeName);
                 img.alt = altText;
             }
-            const zone = block.querySelector('.image-upload-zone');
-            if (zone) {
-                zone.removeAttribute('data-empty');
-                zone.classList.add('has-image');
-            }
-            const uploadBtn = block.querySelector('.image-upload-btn');
-            if (uploadBtn) uploadBtn.hidden = true;
-            const hint = block.querySelector('.image-upload-hint');
-            if (hint) hint.hidden = true;
+            if (img && idbImageId) img.setAttribute('data-idb-image', idbImageId);
             const cap = block.querySelector('.image-caption');
             if (cap && (!(cap.textContent || '').trim() || /описание/i.test(cap.textContent))) {
                 cap.textContent = altText;
@@ -1073,6 +1570,62 @@ function insertImageFromDataUrl(dataUrl, filename) {
     }
     if (typeof snapshotEditor === 'function') snapshotEditor('insert-image-file');
 }
+
+/**
+ * Вставка блока изображения по внешнему URL или data:image
+ */
+function insertImageFromUrl(url, alt) {
+    const editor = document.getElementById('editor');
+    if (!editor || !url) return;
+
+    const src = String(url).trim();
+    if (!src) return;
+
+    const fname = (typeof filenameFromImageSrc === 'function')
+        ? filenameFromImageSrc(src)
+        : 'image.png';
+    const altText = alt || fname.replace(/_/g, ' ').replace(/\.[^.]+$/, '') || 'Изображение';
+
+    if (typeof insertTemplate === 'function') {
+        insertTemplate('image');
+        const blocks = editor.querySelectorAll('.content-image');
+        const block = blocks[blocks.length - 1];
+        if (block) {
+            if (typeof setupImageBlock === 'function') setupImageBlock(block);
+            const img = block.querySelector('img.image-element, img');
+            if (img && typeof revealImageInBlock === 'function') {
+                revealImageInBlock(block, img, src, {
+                    filename: fname,
+                    setExportName: /^data:image\//i.test(src),
+                    alt: altText
+                });
+            } else if (img) {
+                img.src = src;
+                img.hidden = false;
+                img.removeAttribute('hidden');
+                img.alt = altText;
+            }
+            const settingsUrl = block.querySelector('.settings-panel .image-url');
+            if (settingsUrl && /^https?:\/\//i.test(src)) settingsUrl.value = src;
+            const cap = block.querySelector('.image-caption');
+            if (cap && (!(cap.textContent || '').trim() || /описание/i.test(cap.textContent))) {
+                cap.textContent = altText;
+            }
+        }
+    }
+
+    if (typeof showNotification === 'function') {
+        showNotification(
+            /^https?:\/\//i.test(src) ? 'Изображение по URL вставлено' : 'Изображение вставлено',
+            'success'
+        );
+    }
+    if (typeof snapshotEditor === 'function') snapshotEditor('insert-image-url');
+}
+
+window.insertImageFromDataUrl = insertImageFromDataUrl;
+window.insertImageFromUrl = insertImageFromUrl;
+window.isImageUrlString = isImageUrlString;
 
 // Палитра цветов (как на сайте / TinyMCE)
 const EDITOR_COLORS = [
@@ -1390,11 +1943,47 @@ function setupWikiModal() {
     const wikiModal = document.getElementById('wiki-modal');
     if (!wikiBtn || !wikiModal) return;
 
+    const wikiBody = wikiModal.querySelector('.wiki-body') || document.getElementById('wiki-body-scroll');
+    const navLinks = Array.from(wikiModal.querySelectorAll('.wiki-nav-link'));
+
+    function setActiveNav(id) {
+        navLinks.forEach(function (link) {
+            const href = link.getAttribute('href') || '';
+            const targetId = href.charAt(0) === '#' ? href.slice(1) : href;
+            link.classList.toggle('is-active', targetId === id);
+        });
+    }
+
+    function scrollToSection(id) {
+        if (!wikiBody || !id) return;
+        const section = wikiBody.querySelector('#' + id) || document.getElementById(id);
+        if (!section) return;
+        const top = section.offsetTop - 4;
+        wikiBody.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+        setActiveNav(id);
+    }
+
+    function updateActiveFromScroll() {
+        if (!wikiBody) return;
+        const sections = wikiBody.querySelectorAll('.wiki-section[id]');
+        if (!sections.length) return;
+        const scrollTop = wikiBody.scrollTop;
+        let current = sections[0].id;
+        sections.forEach(function (sec) {
+            if (sec.offsetTop - 24 <= scrollTop) current = sec.id;
+        });
+        setActiveNav(current);
+    }
+
     function openWiki() {
         wikiModal.classList.add('active');
         // display задаёт только CSS (.modal.active { display: flex }) — без inline,
         // иначе close-modal (снимает класс) не скрывает окно
         wikiModal.style.display = '';
+        if (wikiBody) {
+            wikiBody.scrollTop = 0;
+            setActiveNav(navLinks[0] ? (navLinks[0].getAttribute('href') || '').replace(/^#/, '') : 'wiki-about');
+        }
     }
 
     function closeWiki() {
@@ -1403,6 +1992,21 @@ function setupWikiModal() {
     }
 
     wikiBtn.addEventListener('click', openWiki);
+
+    navLinks.forEach(function (link) {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            const href = link.getAttribute('href') || '';
+            const id = href.charAt(0) === '#' ? href.slice(1) : href;
+            scrollToSection(id);
+        });
+    });
+
+    if (wikiBody) {
+        wikiBody.addEventListener('scroll', function () {
+            window.requestAnimationFrame(updateActiveFromScroll);
+        }, { passive: true });
+    }
 
     const closeBtn = wikiModal.querySelector('.close-modal');
     if (closeBtn) {
@@ -1433,9 +2037,11 @@ const SHORTCUTS = [
     { keys: 'Ctrl+Shift+K', action: 'link', group: 'Форматирование', desc: 'Вставить ссылку' },
     { keys: 'Ctrl+Shift+L', action: 'unorderedList', group: 'Форматирование', desc: 'Маркированный список' },
     { keys: 'Ctrl+Shift+O', action: 'orderedList', group: 'Форматирование', desc: 'Нумерованный список' },
-    { keys: 'Ctrl+E', action: 'export', group: 'Документ', desc: 'Экспорт HTML' },
+    { keys: 'Ctrl+E', action: 'export', group: 'Документ', desc: 'Экспорт для публикации' },
     { keys: 'Ctrl+Shift+I', action: 'import', group: 'Документ', desc: 'Импорт HTML' },
     { keys: 'Ctrl+S', action: 'export', group: 'Документ', desc: 'Экспорт HTML (сохранить)' },
+    { keys: 'Ctrl+P', action: 'print', group: 'Документ', desc: 'Печать / сохранить как PDF' },
+    { keys: 'Ctrl+F', action: 'find', group: 'Документ', desc: 'Поиск по блокам документа' },
     { keys: 'Ctrl+A', action: 'selectAll', group: 'Блоки', desc: 'Выделить все блоки' },
     { keys: 'Ctrl+D', action: 'copySelected', group: 'Блоки', desc: 'Копировать выделенные блоки' },
     { keys: 'Delete', action: 'deleteSelected', group: 'Блоки', desc: 'Удалить выделенные блоки' },
@@ -1452,7 +2058,9 @@ const SHORTCUTS = [
 // История отмены + автосохранение → js/core/history.js + js/core/autosave.js
 
 // ========== История версий (долговременные снимки) ==========
-const VERSIONS_KEY = 'konstructor_editor_versions_v1';
+// Хранение: IndexedDB (js/core/idb-storage.js). localStorage — только настройки.
+// Кэш _versionsCache синхронизируется с IDB для синхронного чтения в UI.
+const VERSIONS_KEY = 'konstructor_editor_versions_v1'; // legacy, миграция в IDB
 const VERSION_SETTINGS_KEY = 'konstructor_editor_version_settings_v1';
 const DEFAULT_VERSION_INTERVAL_MIN = 15;
 const DEFAULT_MAX_VERSIONS = 30;
@@ -1461,6 +2069,8 @@ let _versionTimer = null;
 let _versionDirty = false;
 let _lastVersionHtml = null;
 let _lastVersionAt = 0;
+let _versionsCache = [];
+let _versionsCacheReady = false;
 
 function getVersionSettings() {
     try {
@@ -1496,7 +2106,10 @@ function saveVersionSettings(partial) {
     return next;
 }
 
+/** Синхронное чтение из кэша (после initVersionsFromIDB) */
 function loadVersions() {
+    if (_versionsCacheReady) return _versionsCache.slice();
+    // fallback: legacy localStorage, пока IDB не готов
     try {
         const raw = localStorage.getItem(VERSIONS_KEY);
         if (!raw) return [];
@@ -1509,8 +2122,22 @@ function loadVersions() {
 }
 
 function persistVersions(list) {
+    _versionsCache = Array.isArray(list) ? list.slice() : [];
+    _versionsCacheReady = true;
+    const idb = window.KonstructorIDB;
+    if (idb && typeof idb.replaceAllVersions === 'function') {
+        idb.replaceAllVersions(_versionsCache).then(function () {
+            refreshStorageIndicator();
+        }).catch(function (err) {
+            console.warn('Versions IDB persist failed', err);
+            showNotification('Не удалось сохранить версию в IndexedDB', 'warning');
+        });
+        return true;
+    }
+    // fallback localStorage
     try {
-        localStorage.setItem(VERSIONS_KEY, JSON.stringify(list));
+        localStorage.setItem(VERSIONS_KEY, JSON.stringify(_versionsCache));
+        refreshStorageIndicator();
         return true;
     } catch (e) {
         console.warn('Versions persist failed', e);
@@ -1518,6 +2145,87 @@ function persistVersions(list) {
         return false;
     }
 }
+
+/** Загрузка версий из IndexedDB в кэш (вызывать при старте) */
+function initVersionsFromIDB() {
+    const idb = window.KonstructorIDB;
+    if (!idb || typeof idb.ready !== 'function') {
+        _versionsCacheReady = true;
+        return Promise.resolve();
+    }
+    return idb.ready().then(function () {
+        return idb.getAllVersions();
+    }).then(function (list) {
+        _versionsCache = Array.isArray(list) ? list : [];
+        _versionsCacheReady = true;
+        if (_versionsCache.length > 0) {
+            _lastVersionHtml = _versionsCache[0].html;
+            _lastVersionAt = _versionsCache[0].savedAt || 0;
+        }
+        refreshStorageIndicator();
+        return _versionsCache;
+    }).catch(function (err) {
+        console.warn('initVersionsFromIDB failed', err);
+        _versionsCacheReady = true;
+        return [];
+    });
+}
+
+/**
+ * Индикатор занятого места (версии / изображения / localStorage / квота).
+ * Обновляет #storage-usage-panel в модалке версий.
+ */
+function refreshStorageIndicator() {
+    const panel = document.getElementById('storage-usage-panel');
+    const idb = window.KonstructorIDB;
+    if (!idb || typeof idb.getUsageBreakdown !== 'function') {
+        if (panel) panel.innerHTML = '<span class="storage-usage-muted">IndexedDB недоступен</span>';
+        return;
+    }
+    idb.getUsageBreakdown().then(function (b) {
+        const fb = idb.formatBytes || function (n) { return n + ' Б'; };
+        const pct = b.quota > 0 ? Math.min(100, Math.round((b.usage / b.quota) * 1000) / 10) : null;
+        const barPct = pct != null ? Math.min(100, pct) : 0;
+        const level = pct == null ? '' : (pct >= 90 ? ' storage-usage-critical' : (pct >= 70 ? ' storage-usage-warn' : ''));
+
+        const html =
+            '<div class="storage-usage-head">' +
+            '<span class="storage-usage-title">Занято место</span>' +
+            (pct != null
+                ? '<span class="storage-usage-total' + level + '">' + fb(b.usage) + ' / ' + fb(b.quota) + ' (' + pct + '%)</span>'
+                : '<span class="storage-usage-total">' + fb(b.usage || (b.versionsBytes + b.imagesBytes + b.localStorageBytes)) + '</span>') +
+            '</div>' +
+            '<div class="storage-usage-bar' + level + '"><div class="storage-usage-bar-fill" style="width:' + barPct + '%"></div></div>' +
+            '<ul class="storage-usage-breakdown">' +
+            '<li><span>Версии</span><strong>' + fb(b.versionsBytes) + '</strong> <em>(' + b.versionsCount + ')</em></li>' +
+            '<li><span>Изображения (IDB)</span><strong>' + fb(b.imagesBytes) + '</strong> <em>(' + b.imagesCount + ')</em></li>' +
+            '<li><span>localStorage</span><strong>' + fb(b.localStorageBytes) + '</strong></li>' +
+            '</ul>' +
+            '<div class="storage-usage-actions">' +
+            '<button type="button" class="btn btn-secondary btn-sm" id="storage-clear-images-btn" title="Удалить кэш изображений в IndexedDB">Очистить изображения</button>' +
+            '</div>';
+
+        if (panel) {
+            panel.innerHTML = html;
+            const clearImg = document.getElementById('storage-clear-images-btn');
+            if (clearImg) {
+                clearImg.addEventListener('click', function () {
+                    if (!confirm('Очистить кэш изображений в IndexedDB? Картинки в текущем документе останутся (data URL), но резервные копии в IDB будут удалены.')) return;
+                    idb.clearImages().then(function () {
+                        showNotification('Кэш изображений очищен', 'info');
+                        refreshStorageIndicator();
+                    }).catch(function () {
+                        showNotification('Не удалось очистить изображения', 'warning');
+                    });
+                });
+            }
+        }
+    }).catch(function () {
+        if (panel) panel.innerHTML = '<span class="storage-usage-muted">Не удалось оценить место</span>';
+    });
+}
+
+window.refreshStorageIndicator = refreshStorageIndicator;
 
 function markVersionDirty() {
     _versionDirty = true;
@@ -1593,7 +2301,10 @@ function createVersionSnapshot(opts) {
         source: source,
         label: opts.label || (source === 'manual' ? 'Ручная версия' : 'Автосохранение'),
         html: html,
-        preview: versionPreviewText(html)
+        preview: versionPreviewText(html),
+        size: (window.KonstructorIDB && typeof window.KonstructorIDB.approxStringSize === 'function')
+            ? window.KonstructorIDB.approxStringSize(html)
+            : (html ? html.length * 2 : 0)
     };
 
     let list = existing.slice();
@@ -2272,7 +2983,20 @@ function openVersionsModal() {
     const settings = getVersionSettings();
     const input = document.getElementById('version-interval-min');
     if (input) input.value = String(settings.autoVersionIntervalMin);
-    renderVersionsList();
+    // подтянуть свежий список из IDB
+    const idb = window.KonstructorIDB;
+    if (idb && typeof idb.getAllVersions === 'function') {
+        idb.getAllVersions().then(function (list) {
+            _versionsCache = Array.isArray(list) ? list : [];
+            _versionsCacheReady = true;
+            renderVersionsList();
+        }).catch(function () {
+            renderVersionsList();
+        });
+    } else {
+        renderVersionsList();
+    }
+    refreshStorageIndicator();
     modal.classList.add('active');
 }
 
@@ -2291,11 +3015,20 @@ function restartVersionTimer() {
 
 function setupVersionHistory() {
     const settings = getVersionSettings();
+    // кэш подтянется async из IDB; пока используем то, что есть
     const versions = loadVersions();
     if (versions.length > 0) {
         _lastVersionHtml = versions[0].html;
         _lastVersionAt = versions[0].savedAt || 0;
     }
+
+    initVersionsFromIDB().then(function () {
+        const list = loadVersions();
+        if (list.length > 0) {
+            _lastVersionHtml = list[0].html;
+            _lastVersionAt = list[0].savedAt || 0;
+        }
+    });
 
     restartVersionTimer();
 
@@ -2436,10 +3169,15 @@ function setupKeyboardShortcuts() {
             return;
         }
 
-        // Экспорт / импорт — всегда
+        // Экспорт / импорт / печать — всегда
         if (ctrl && !shift && (key === 'e' || key === 'E' || key === 's' || key === 'S')) {
             stopBrowser();
             exportHTML();
+            return;
+        }
+        if (ctrl && !shift && (key === 'p' || key === 'P')) {
+            stopBrowser();
+            if (typeof printEditorDocument === 'function') printEditorDocument();
             return;
         }
         if (ctrl && shift && (key === 'i' || key === 'I')) {
@@ -2499,8 +3237,7 @@ function setupKeyboardShortcuts() {
         // Ссылка: Ctrl+Shift+K (Ctrl+K занят палитрой)
         if (ctrl && shift && (key === 'k' || key === 'K')) {
             stopBrowser();
-            const url = prompt('Введите URL:');
-            if (url) document.execCommand('createLink', false, url);
+            openLinkEditor();
             return;
         }
         if (ctrl && shift && (key === 'l' || key === 'L')) {
@@ -2606,7 +3343,7 @@ function loadTemplates() {
 
 const KNOWN_CONTENT_CLASSES = [
     'content-spoiler', 'content-warning', 'content-success', 'content-note',
-    'content-numbered', 'content-code', 'content-image', 'content-quote',
+    'content-numbered', 'content-toc', 'content-code', 'content-image', 'content-quote',
     'content-link-buttons', 'content-1c-configuration', 'content-glossary',
     'content-image-caption', 'content-type-comparison', 'content-developer-note',
     'content-custom', 'content-text',
@@ -2630,7 +3367,7 @@ function getBlockUIShell(contentClass, innerContentHTML, isFreeText = false) {
     </div>`;
     }
 
-    const settingsHTML = (typeof universalSettingsHTML !== 'undefined')
+    const baseSettings = (typeof universalSettingsHTML !== 'undefined')
         ? universalSettingsHTML
         : `
         <div class="settings-group">
@@ -2653,6 +3390,31 @@ function getBlockUIShell(contentClass, innerContentHTML, isFreeText = false) {
             <button class="settings-btn reset-defaults" type="button">Вернуть по умолчанию</button>
             <button class="settings-btn close-settings" type="button">Закрыть</button>
         </div>`;
+
+    const imageSettings = (contentClass === 'content-image' || contentClass === 'content-image-caption')
+        ? `
+            <div class="settings-group">
+                <div class="settings-group-title">Изображение</div>
+                <div class="settings-row">
+                    <label class="settings-label">Файл:</label>
+                    <input type="file" class="settings-control image-file-input" accept="image/*">
+                </div>
+                <div class="settings-row">
+                    <label class="settings-label">URL:</label>
+                    <input type="url" class="settings-control image-url" placeholder="https://…">
+                </div>
+                <div class="settings-row">
+                    <label class="settings-label">Alt / подпись:</label>
+                    <input type="text" class="settings-control image-alt" placeholder="Описание изображения">
+                </div>
+                <div class="settings-row">
+                    <label class="settings-label">Макс. ширина (px):</label>
+                    <input type="number" class="settings-control image-width" placeholder="600" min="50" max="2000">
+                </div>
+            </div>`
+        : '';
+
+    const settingsHTML = imageSettings + baseSettings;
 
     return `
     <div class="block ${contentClass}" draggable="true">
@@ -2988,16 +3750,18 @@ function convertLegacyStructures(root) {
         }
     });
 
-    // --- Нумерованные шаги (фон #f8f9fa + кружок с цифрой) ---
+    // --- Нумерованные шаги / оглавление (фон #f8f9fa + кружок) ---
     Array.from(root.querySelectorAll('div')).forEach(function(el) {
-        if (el.classList.contains('content-numbered') || el.closest('.content-numbered, .block, .content-spoiler, .content-warning, .content-success, .content-note')) return;
+        if (el.classList.contains('content-numbered') || el.classList.contains('content-toc') ||
+            el.closest('.content-numbered, .content-toc, .block, .content-spoiler, .content-warning, .content-success, .content-note')) return;
         const style = (el.getAttribute('style') || '').toLowerCase();
         const bgMatch = style.includes('#f8f9fa') || style.includes('rgb(248, 249, 250)');
         if (!bgMatch) return;
 
-        // Ищем кружок с номером
+        // Ищем кружок с номером или ≡
         let number = '';
         let title = '';
+        let circleText = '';
         const kids = Array.from(el.children);
         const headerRow = kids.find(function(c) {
             const s = (c.getAttribute('style') || '').toLowerCase();
@@ -3007,6 +3771,7 @@ function convertLegacyStructures(root) {
             const circle = headerRow.querySelector('div');
             if (circle) {
                 const t = (circle.textContent || '').trim();
+                circleText = t;
                 if (/^\d+$/.test(t)) number = t;
             }
             const strong = headerRow.querySelector('strong');
@@ -3016,31 +3781,126 @@ function convertLegacyStructures(root) {
                 if (titleDiv) title = titleDiv.textContent.trim();
             }
         }
-        if (!number && !title) return;
+        if (!number && !title && circleText !== '≡') return;
 
         // Содержимое после заголовка
         let bodyHtml = '';
-        kids.forEach(function(c, idx) {
+        kids.forEach(function(c) {
             if (c === headerRow) return;
             bodyHtml += c.outerHTML;
         });
         if (!bodyHtml.trim()) {
-            // текст может быть прямо в el после header
             const clone = el.cloneNode(true);
             if (clone.firstElementChild) clone.removeChild(clone.firstElementChild);
             bodyHtml = clone.innerHTML.trim();
         }
 
+        const isToc = /оглавление/i.test(title) || circleText === '≡' ||
+            (bodyHtml && /<ol[\s>]/i.test(bodyHtml) && /<a\s[^>]*href\s*=/i.test(bodyHtml) && !number);
+
         const wrapper = document.createElement('div');
-        wrapper.className = 'content-numbered';
-        wrapper.innerHTML =
-            '<div class="numbered-container" style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; margin-bottom: 15px; border-radius: 4px;">' +
-            '<div class="numbered-header" style="display: flex; align-items: center; margin-bottom: 10px;">' +
-            '<div class="numbered-number" style="background: #222; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">' +
-            (number || '1') + '</div>' +
-            '<div class="numbered-title"><strong>' + (title || 'Шаг').replace(/</g, '&lt;') + '</strong></div></div>' +
-            '<div class="numbered-content">' + (bodyHtml || '') + '</div></div>';
+        if (isToc) {
+            wrapper.className = 'content-toc';
+            wrapper.innerHTML =
+                '<div class="toc-container" style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; margin-bottom: 15px; border-radius: 4px; color: #333;">' +
+                '<div class="toc-header" style="display: flex; align-items: center; margin-bottom: 10px;">' +
+                '<div class="toc-icon" style="background: #2e7d32; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">≡</div>' +
+                '<div class="toc-title"><strong>' + (title || 'Оглавление').replace(/</g, '&lt;') + '</strong></div></div>' +
+                '<div class="toc-content">' + (bodyHtml || '<ol class="toc-list"><li><a href="#section-1">Раздел 1</a></li></ol>') + '</div></div>';
+        } else {
+            wrapper.className = 'content-numbered';
+            wrapper.innerHTML =
+                '<div class="numbered-container" style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; margin-bottom: 15px; border-radius: 4px;">' +
+                '<div class="numbered-header" style="display: flex; align-items: center; margin-bottom: 10px;">' +
+                '<div class="numbered-number" style="background: #222; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">' +
+                (number || '1') + '</div>' +
+                '<div class="numbered-title"><strong>' + (title || 'Шаг').replace(/</g, '&lt;') + '</strong></div></div>' +
+                '<div class="numbered-content">' + (bodyHtml || '') + '</div></div>';
+        }
         if (el.parentNode) el.parentNode.replaceChild(wrapper, el);
+    });
+
+    // --- Голые <figure> / <img> с src → content-image / content-image-caption ---
+    // (раньше часто оставались «вставьте вручную» или теряли внешний URL)
+    Array.from(root.querySelectorAll('figure')).forEach(function(fig) {
+        if (fig.closest('.content-image, .content-image-caption, .block')) return;
+        const img = fig.querySelector('img');
+        if (!img) return;
+        const src = (img.getAttribute('src') || '').trim();
+        if (!src || /^https?:\/\/via\.placeholder/i.test(src)) return;
+
+        const alt = (img.getAttribute('alt') || '').trim();
+        const captionEl = fig.querySelector('figcaption');
+        const caption = captionEl ? captionEl.innerHTML.trim() : (alt || '');
+        const fname = (typeof filenameFromImageSrc === 'function')
+            ? filenameFromImageSrc(src)
+            : 'image.png';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = caption ? 'content-image-caption' : 'content-image';
+        const isHttp = /^https?:\/\//i.test(src);
+        const exportAttr = (!isHttp || /^data:image\//i.test(src))
+            ? ' data-export-filename="' + fname.replace(/"/g, '') + '"'
+            : '';
+        const safeAlt = (alt || fname).replace(/"/g, '&quot;');
+        wrapper.innerHTML =
+            '<div class="image-container" style="background: var(--tpl-image-bg, #f8f9fa); border: 1px solid var(--tpl-image-border, #e9ecef); padding: 15px; margin-bottom: 15px; border-radius: 4px; text-align: center;">' +
+            '<div class="image-upload-zone has-image">' +
+            '<img src="' + src.replace(/"/g, '&quot;') + '" alt="' + safeAlt + '" class="image-element"' + exportAttr +
+            ' style="max-width: 100%; height: auto; border-radius: 4px; margin-bottom: 10px;">' +
+            '<button type="button" class="image-upload-btn" hidden>📷 Выбрать файл или скриншот</button>' +
+            '<p class="image-upload-hint" hidden>PNG, JPG, GIF, WebP — или URL в настройках</p>' +
+            '<input type="file" class="image-block-file-input" accept="image/*" hidden>' +
+            '</div>' +
+            (caption
+                ? '<div class="image-caption" contenteditable="true" style="color: var(--tpl-image-caption, #666); font-style: italic; font-size: 14px;">' + caption + '</div>'
+                : '') +
+            '</div>';
+        if (fig.parentNode) fig.parentNode.replaceChild(wrapper, fig);
+    });
+
+    Array.from(root.querySelectorAll('img')).forEach(function(img) {
+        if (img.closest('.content-image, .content-image-caption, .block, .image-upload-zone, .image-container')) return;
+        // внутри уже обрабатываемых content-* — оставляем как есть (rebuild подхватит)
+        if (img.closest('[class*="content-"]')) return;
+
+        const src = (img.getAttribute('src') || '').trim();
+        if (!src || /^https?:\/\/via\.placeholder/i.test(src)) return;
+
+        const alt = (img.getAttribute('alt') || '').trim();
+        const fname = (typeof filenameFromImageSrc === 'function')
+            ? filenameFromImageSrc(src)
+            : 'image.png';
+        const isHttp = /^https?:\/\//i.test(src);
+        const exportAttr = (!isHttp || /^data:image\//i.test(src))
+            ? ' data-export-filename="' + fname.replace(/"/g, '') + '"'
+            : '';
+        const safeAlt = (alt || fname).replace(/"/g, '&quot;');
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'content-image';
+        wrapper.innerHTML =
+            '<div class="image-container" style="background: var(--tpl-image-bg, #f8f9fa); border: 1px solid var(--tpl-image-border, #e9ecef); padding: 15px; margin-bottom: 15px; border-radius: 4px; text-align: center;">' +
+            '<div class="image-upload-zone has-image">' +
+            '<img src="' + src.replace(/"/g, '&quot;') + '" alt="' + safeAlt + '" class="image-element"' + exportAttr +
+            ' style="max-width: 100%; height: auto; border-radius: 4px; margin-bottom: 10px;">' +
+            '<button type="button" class="image-upload-btn" hidden>📷 Выбрать файл или скриншот</button>' +
+            '<p class="image-upload-hint" hidden>PNG, JPG, GIF, WebP — или URL в настройках</p>' +
+            '<input type="file" class="image-block-file-input" accept="image/*" hidden>' +
+            '</div>' +
+            '<div class="image-caption" contenteditable="true" data-placeholder="Подпись к изображению…" style="color: var(--tpl-image-caption, #666); font-style: italic; font-size: 14px;">' +
+            (alt ? alt.replace(/</g, '&lt;') : '') +
+            '</div></div>';
+
+        // если img один в <p>/<div> — заменяем родителя
+        const parent = img.parentNode;
+        if (parent && parent !== root && parent.children.length === 1 &&
+            (parent.tagName === 'P' || parent.tagName === 'DIV' || parent.tagName === 'SPAN') &&
+            !(parent.textContent || '').replace(img.alt || '', '').trim()) {
+            parent.parentNode.replaceChild(wrapper, parent);
+        } else if (parent) {
+            parent.replaceChild(wrapper, img);
+        }
     });
 
     // --- Голые текстовые узлы верхнего уровня → <p> ---
@@ -3065,27 +3925,47 @@ function convertLegacyStructures(root) {
  * Умный импорт: восстанавливает интерактивные блоки (включая вложенные).
  * Принимает фрагмент или полный HTML-документ (с DOCTYPE/head/style) —
  * лишняя обёртка отбрасывается, legacy-разметка приводится к content-*.
+ * Возвращает объект отчёта: { ok, blocks, notes[] }.
  */
 function smartImportHTML(htmlString) {
     const editor = document.getElementById('editor');
-    if (!editor) return;
+    const report = { ok: true, blocks: 0, notes: [] };
+    if (!editor) return report;
+
+    const sourceLen = (htmlString || '').trim().length;
+    if (!sourceLen) {
+        report.ok = false;
+        report.notes.push('Пустой ввод — нечего импортировать.');
+        showImportReport(report);
+        return report;
+    }
 
     // Убираем стартовую drop-zone если есть
     const initialDropZone = document.getElementById('initial-drop-zone');
     if (initialDropZone) initialDropZone.remove();
 
     // 0. Полный документ → только body без style/script
+    const hadDoctype = /<!DOCTYPE/i.test(htmlString) || /<html[\s>]/i.test(htmlString);
     const cleanedSource = extractBodyFromFullHTML(htmlString);
+    if (hadDoctype) {
+        report.notes.push('Обнаружен полный HTML-документ: удалены DOCTYPE, &lt;head&gt;, стили и скрипты — в редактор попало только содержимое body.');
+    }
 
     const temp = document.createElement('div');
     temp.innerHTML = cleanedSource;
 
     // Если уже есть полноценные .block — просто вставляем
-    if (temp.querySelector('.block') && !temp.querySelector('.content-spoiler:not(.block), .content-numbered:not(.block), .content-success:not(.block), .content-warning:not(.block), .content-note:not(.block)')) {
+    if (temp.querySelector('.block') && !temp.querySelector('.content-spoiler:not(.block), .content-numbered:not(.block), .content-toc:not(.block), .content-success:not(.block), .content-warning:not(.block), .content-note:not(.block)')) {
         editor.innerHTML = temp.innerHTML;
         reinitializeBlocks();
         editor.querySelectorAll('.free-text-block').forEach(bindFreeTextBlock);
-        return;
+        report.blocks = editor.querySelectorAll('.block').length;
+        report.notes.push('Импортированы готовые блоки редактора (' + report.blocks + ').');
+        showImportReport(report);
+        if (typeof showNotification === 'function') {
+            showNotification('Импорт: ' + report.blocks + ' блок(ов)', 'success');
+        }
+        return report;
     }
 
     // 1. Очищаем мусор редактора
@@ -3098,6 +3978,7 @@ function smartImportHTML(htmlString) {
     rebuildAllContentBlocks(temp);
 
     // 4. Обрабатываем оставшиеся голые <p> / текстовые узлы как free-text
+    let freeTextCount = 0;
     Array.from(temp.children).forEach(function(child) {
         if (child.classList && child.classList.contains('block')) return;
         if (child.tagName === 'P' || child.tagName === 'DIV' || child.tagName === 'SPAN' ||
@@ -3113,6 +3994,7 @@ function smartImportHTML(htmlString) {
             );
             if (block && child.parentNode) {
                 child.parentNode.replaceChild(block, child);
+                freeTextCount++;
             }
         }
     });
@@ -3137,6 +4019,8 @@ function smartImportHTML(htmlString) {
             p.innerHTML = cleanedSource;
             const shell = rebuildFreeTextBlock(p);
             if (shell) editor.appendChild(shell);
+            report.notes.push('Структура не распознана — весь HTML вставлен как свободный текст. Для произвольной разметки используйте блок «Пользовательский HTML».');
+            report.ok = false;
         }
     }
 
@@ -3147,6 +4031,58 @@ function smartImportHTML(htmlString) {
     editor.querySelectorAll('.free-text').forEach(function(el) {
         el.setAttribute('contenteditable', 'true');
     });
+
+    report.blocks = editor.querySelectorAll('.block').length;
+    const knownInteractive = editor.querySelectorAll(
+        '.content-spoiler, .content-warning, .content-success, .content-note, .content-numbered, .content-toc, .content-code, .content-image, .content-image-caption, .content-custom'
+    ).length;
+    const imageBlocks = editor.querySelectorAll('.content-image, .content-image-caption');
+    let externalImg = 0;
+    imageBlocks.forEach(function(b) {
+        const im = b.querySelector('img');
+        const s = im && (im.getAttribute('src') || '');
+        if (s && /^https?:\/\//i.test(s)) externalImg++;
+    });
+    if (freeTextCount > 0) {
+        report.notes.push('Часть разметки перенесена как свободный текст (' + freeTextCount + ') — типичные причины: нет классов content-*, нестандартные контейнеры, таблицы без оболочки.');
+    }
+    if (imageBlocks.length) {
+        report.notes.push(
+            'Изображений: ' + imageBlocks.length +
+            (externalImg ? ' (внешних URL: ' + externalImg + ' — src сохранён, файл можно заменить в настройках блока)' : ' (локальные/data URL)')
+        );
+    }
+    if (report.blocks === 0) {
+        report.ok = false;
+        report.notes.push('Блоки не созданы. Проверьте, что вставлен HTML тела статьи, а не только стили или пустой фрагмент.');
+    } else if (knownInteractive === 0 && report.blocks > 0) {
+        report.notes.push('Интерактивные шаблоны (спойлер, шаги, предупреждения) не найдены — контент как текст/пользовательский HTML. При необходимости оберните фрагменты через «Пользовательский HTML».');
+    } else {
+        report.notes.push('Готово: ' + report.blocks + ' блок(ов), из них интерактивных шаблонов: ' + knownInteractive + '.');
+    }
+
+    showImportReport(report);
+    if (typeof showNotification === 'function') {
+        showNotification(
+            report.ok ? ('Импорт: ' + report.blocks + ' блок(ов)') : 'Импорт выполнен частично',
+            report.ok ? 'success' : 'warning'
+        );
+    }
+    return report;
+}
+
+function showImportReport(report) {
+    const el = document.getElementById('import-report');
+    if (!el) return;
+    if (!report || !report.notes || !report.notes.length) {
+        el.className = 'import-report';
+        el.innerHTML = '';
+        return;
+    }
+    el.className = 'import-report visible ' + (report.ok ? 'ok' : 'warn');
+    el.innerHTML = '<strong>' + (report.ok ? 'Импорт' : 'Импорт с ограничениями') + '</strong><ul style="margin:6px 0 0;padding-left:1.2em;">' +
+        report.notes.map(function(n) { return '<li>' + n + '</li>'; }).join('') +
+        '</ul>';
 }
 
 function rebuildInteractiveBlock(cleanElement, contentClass) {

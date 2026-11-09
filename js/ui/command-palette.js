@@ -8,9 +8,19 @@
     let filtered = [];
 
     const ACTION_COMMANDS = [
-        { id: 'action:export', title: 'Экспорт', group: 'Документ', keys: '', run: function () {
+        { id: 'action:export', title: 'Экспорт для публикации', group: 'Документ', keys: 'Ctrl+E', run: function () {
             const btn = document.getElementById('export-btn');
             if (btn) btn.click();
+        }},
+        { id: 'action:print', title: 'Печать / сохранить как PDF', group: 'Документ', keys: 'Ctrl+P', run: function () {
+            if (typeof printEditorDocument === 'function') printEditorDocument();
+            else {
+                const btn = document.getElementById('print-btn');
+                if (btn) btn.click();
+            }
+        }},
+        { id: 'action:find', title: 'Поиск по документу', group: 'Документ', keys: 'Ctrl+F', run: function () {
+            if (typeof openFindBar === 'function') openFindBar();
         }},
         { id: 'action:import', title: 'Импорт', group: 'Документ', keys: 'Ctrl+Shift+I', run: function () {
             const btn = document.getElementById('import-btn');
@@ -20,6 +30,20 @@
             if (typeof openPublishModal === 'function') openPublishModal();
             else {
                 const btn = document.getElementById('publish-btn');
+                if (btn) btn.click();
+            }
+        }},
+        { id: 'action:kb', title: 'База знаний', group: 'Документ', keys: '', run: function () {
+            if (typeof openKnowledgeBase === 'function') openKnowledgeBase();
+            else {
+                const btn = document.getElementById('kb-btn');
+                if (btn) btn.click();
+            }
+        }},
+        { id: 'action:kb-publish', title: 'Опубликовать в базу знаний', group: 'Документ', keys: '', run: function () {
+            if (typeof openPublishToKb === 'function') openPublishToKb();
+            else {
+                const btn = document.getElementById('kb-publish-btn');
                 if (btn) btn.click();
             }
         }},
@@ -75,6 +99,7 @@
         'code': 'Код',
         'image': 'Изображение',
         'quote': 'Цитата',
+        'toc': 'Оглавление',
         'video': 'Видео',
         'divider': 'Разделитель',
         'download-file': 'Файл для скачивания',

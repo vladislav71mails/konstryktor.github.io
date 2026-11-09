@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Konstryktor — визуальный HTML-редактор",
   "short_name": "Konstryktor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Блочный визуальный HTML-редактор статей и инструкций. Работает локально как расширение — исходники не публикуются на сайт.",
   "icons": {
     "16": "icons/icon16.png",
@@ -19,7 +19,7 @@
       "48": "icons/icon48.png"
     }
   },
-  "permissions": ["storage"],
+  "permissions": [],
   "host_permissions": [
     "https://ru.yougile.com/*",
     "https://yougile.com/*"

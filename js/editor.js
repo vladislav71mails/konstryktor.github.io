@@ -125,6 +125,10 @@ if (exportBtn) {
                 setupSettingsPanel(block);
                 // КЛЮЧЕВОЕ: Загружаем текущие цвета в инпуты!
                 loadCurrentColorsToPanel(block);
+                loadAnchorIdToPanel(block);
+                if (block.classList.contains('content-toc')) {
+                    setupTocItemsEditor(block);
+                }
                 
                 // Блокируем прокрутку body когда открыта панель
                 document.body.style.overflow = 'hidden';
@@ -163,7 +167,9 @@ if (exportBtn) {
     if (applyBtn) {
         applyBtn.addEventListener('click', function(e) {
             e.stopPropagation();
-            applyBlockSettings(block); // Используем старую функцию для полного применения
+            applyBlockSettings(block);
+            applyAnchorIdFromPanel(block);
+            applyTocItemsFromPanel(block);
             
             // Закрываем панель после применения
             const settingsPanel = block.querySelector('.settings-panel');
@@ -720,37 +726,39 @@ function applySettingsLive(block) {
 }
 
 // УНИВЕРСАЛЬНЫЕ НАСТРОЙКИ ДЛЯ ВСЕХ БЛОКОВ
-function applyBlockSettings(block) {
+// opts.skipColors — не трогать background/color (уже выставлены через CSS-переменные при сбросе)
+function applyBlockSettings(block, opts) {
+    opts = opts || {};
     const settingsPanel = block.querySelector('.settings-panel');
     const contentDiv = block.querySelector('.editable-content > div') ||
         block.querySelector('.editable-content');
     
     if (contentDiv) {
-        // Если сброс по умолчанию - используем цвета макета
-        const isResetting = settingsPanel && settingsPanel.querySelector('.reset-defaults:focus');
-        
-        if (isResetting) {
-            const blockType = Array.from(block.classList).find(cls => cls.startsWith('content-'));
-            const templateColors = getTemplateColors(blockType);
+        if (!opts.skipColors) {
+            // Если сброс по умолчанию - theme-aware CSS vars (не сырой hex)
+            const isResetting = settingsPanel && settingsPanel.querySelector('.reset-defaults:focus');
             
-            // Применяем цвета макета
-            contentDiv.style.backgroundColor = templateColors.bgColor;
-            contentDiv.style.color = templateColors.textColor;
-            contentDiv.style.borderColor = templateColors.borderColor;
-        } else {
-            // Обычное применение настроек
-            const bgColor = settingsPanel?.querySelector('.bg-color-setting');
-            const textColor = settingsPanel?.querySelector('.text-color-setting');
-            const borderColor = settingsPanel?.querySelector('.border-color-setting');
-            
-            if (bgColor && bgColor.value) {
-                contentDiv.style.backgroundColor = bgColor.value;
-            }
-            if (textColor && textColor.value) {
-                contentDiv.style.color = textColor.value;
-            }
-            if (borderColor && borderColor.value) {
-                contentDiv.style.borderColor = borderColor.value;
+            if (isResetting) {
+                const blockType = Array.from(block.classList).find(cls => cls.startsWith('content-'));
+                const cssVars = getTemplateCssVars(blockType);
+                contentDiv.style.backgroundColor = cssVars.bg;
+                contentDiv.style.color = cssVars.text;
+                contentDiv.style.borderColor = cssVars.border;
+            } else {
+                // Обычное применение настроек (ручной выбор в color picker)
+                const bgColor = settingsPanel?.querySelector('.bg-color-setting');
+                const textColor = settingsPanel?.querySelector('.text-color-setting');
+                const borderColor = settingsPanel?.querySelector('.border-color-setting');
+                
+                if (bgColor && bgColor.value) {
+                    contentDiv.style.backgroundColor = bgColor.value;
+                }
+                if (textColor && textColor.value) {
+                    contentDiv.style.color = textColor.value;
+                }
+                if (borderColor && borderColor.value) {
+                    contentDiv.style.borderColor = borderColor.value;
+                }
             }
         }
         
@@ -1193,22 +1201,62 @@ function getDefaultColors(blockType) {
     return getTemplateColors(blockType);
 }
 
+/**
+ * CSS-переменные шаблона для блока (как в factories) —
+ * в dark-theme подставляются тёмные значения из :root body.dark-theme.
+ */
+function getTemplateCssVars(blockType) {
+    const map = {
+        'content-warning':  { bg: 'var(--tpl-warning-bg, #ffd1d1)', text: 'var(--text-color, #333)', border: 'var(--tpl-warning-border, #7a0000)' },
+        'content-success':  { bg: 'var(--tpl-success-bg, #eaf8db)', text: 'var(--text-color, #333)', border: 'var(--tpl-success-border, #2e7d32)' },
+        'content-note':     { bg: 'var(--tpl-note-bg, #fffed1)', text: 'var(--text-color, #333)', border: 'var(--tpl-note-border, #ffc107)' },
+        'content-numbered': { bg: 'var(--tpl-numbered-bg, #f8f9fa)', text: 'var(--text-color, #333)', border: 'var(--tpl-numbered-border, #e9ecef)' },
+        'content-code':     { bg: 'var(--tpl-code-bg, #f8f8f8)', text: 'var(--tpl-code-text, #1e1e1e)', border: 'var(--tpl-code-border, #ddd)' },
+        'content-spoiler':  { bg: 'var(--tpl-spoiler-bg, #f5f5f5)', text: 'var(--text-color, #333)', border: 'var(--tpl-spoiler-border, #ccc)' },
+        'content-toc':      { bg: 'var(--tpl-numbered-bg, #f8f9fa)', text: 'var(--text-color, #333)', border: 'var(--tpl-numbered-border, #e9ecef)' },
+        'content-table':    { bg: 'transparent', text: 'var(--text-color, #333)', border: 'var(--border-color, #ccc)' },
+        'content-image':    { bg: 'var(--tpl-image-bg, #f8f9fa)', text: 'var(--text-color, #333)', border: 'var(--tpl-image-border, #e9ecef)' },
+        'content-quote':    { bg: 'var(--tpl-quote-bg, #f0f8ff)', text: 'var(--tpl-quote-text, #2c3e50)', border: 'var(--tpl-quote-border, #4a90e2)' }
+    };
+    return map[blockType] || { bg: 'var(--surface-2, #f8f9fa)', text: 'var(--text-color, #333)', border: 'var(--border-color, #ccc)' };
+}
+
+/** Снять «запечённые» light hex с контейнера и типичных потомков */
+function clearBakedThemeInlineStyles(root) {
+    if (!root) return;
+    const targets = [root].concat(Array.from(root.querySelectorAll(
+        '.spoiler-container, .spoiler-header, .spoiler-content, .spoiler-body, summary,' +
+        '.warning-container, .success-container, .note-container, .numbered-container, .code-container,' +
+        '.toc-container, .toc-header, .toc-title, .toc-list, .toc-list a,' +
+        'table, th, td, .editor-table, .table-wrap'
+    )));
+    targets.forEach(function (el) {
+        if (!el || !el.style) return;
+        el.style.background = '';
+        el.style.backgroundColor = '';
+        el.style.color = '';
+        el.style.borderColor = '';
+        // не трогаем padding/margin/layout
+    });
+}
+
 // Сброс настроек к значениям по умолчанию
 function resetToDefaultSettings(block) {
     const blockType = Array.from(block.classList).find(cls => cls.startsWith('content-'));
-    const contentDiv = block.querySelector('.editable-content > div');
+    const contentDiv = block.querySelector('.editable-content > div') ||
+        block.querySelector('.editable-content');
     const settingsPanel = block.querySelector('.settings-panel');
     
     if (!contentDiv || !settingsPanel) return;
     
     const defaultColors = getDefaultColors(blockType);
+    const cssVars = getTemplateCssVars(blockType);
     
-    // Сбрасываем цвета в панели настроек
+    // Сбрасываем цвета в панели настроек (hex для color input)
     const bgColorInput = settingsPanel.querySelector('.bg-color-setting');
     const textColorInput = settingsPanel.querySelector('.text-color-setting');
     const borderColorInput = settingsPanel.querySelector('.border-color-setting');
     
-    // Устанавливаем значения по умолчанию ИЗ МАКЕТА
     if (bgColorInput) bgColorInput.value = defaultColors.bgColor;
     if (textColorInput) textColorInput.value = defaultColors.textColor;
     if (borderColorInput) borderColorInput.value = defaultColors.borderColor;
@@ -1230,8 +1278,33 @@ function resetToDefaultSettings(block) {
         delete el.dataset.originalDisplay;
     });
     
-    // ПРИМЕНЯЕМ настройки из макета (а не просто очищаем)
-    applyBlockSettings(block);
+    // Убрать импортные/запечённые hex — иначе dark-theme CSS не пробивает inline
+    clearBakedThemeInlineStyles(contentDiv);
+    
+    // Вернуть theme-aware var() как у блоков из сайдбара
+    contentDiv.style.backgroundColor = cssVars.bg;
+    contentDiv.style.color = cssVars.text;
+    contentDiv.style.borderColor = cssVars.border;
+    
+    // Для вложенных контейнеров — тоже var(), чтобы совпадало с factories
+    const inner = contentDiv.matches('.spoiler-container, .warning-container, .success-container, .note-container, .numbered-container, .code-container, .toc-container')
+        ? contentDiv
+        : contentDiv.querySelector('.spoiler-container, .warning-container, .success-container, .note-container, .numbered-container, .code-container, .toc-container');
+    if (inner) {
+        inner.style.background = cssVars.bg;
+        inner.style.backgroundColor = cssVars.bg;
+        inner.style.color = cssVars.text;
+        inner.style.borderColor = cssVars.border;
+    }
+    const spoilerHeader = contentDiv.querySelector('.spoiler-header, summary.spoiler-header');
+    if (spoilerHeader) {
+        spoilerHeader.style.background = cssVars.bg;
+        spoilerHeader.style.backgroundColor = cssVars.bg;
+        spoilerHeader.style.color = cssVars.text;
+    }
+    
+    // Видимость (иконки/заголовки) без повторного запекания hex
+    applyBlockSettings(block, { skipColors: true });
     
     showNotification('Настройки сброшены по умолчанию', 'success');
 }
@@ -1792,3 +1865,180 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // create*Block factories loaded from js/blocks/factories.js
+
+function loadAnchorIdToPanel(block) {
+    const panel = block.querySelector('.settings-panel');
+    if (!panel) return;
+    const input = panel.querySelector('.anchor-id-setting');
+    if (!input) return;
+    const target = block.querySelector('.editable-content > div') ||
+        block.querySelector('[contenteditable="true"]') ||
+        block.querySelector('.editable-content');
+    input.value = (target && target.id) ? target.id : (block.id && block.id.indexOf('block') !== 0 ? block.id : '');
+}
+
+function applyAnchorIdFromPanel(block) {
+    const panel = block.querySelector('.settings-panel');
+    if (!panel) return;
+    const input = panel.querySelector('.anchor-id-setting');
+    if (!input) return;
+    let id = (input.value || '').trim().replace(/\s+/g, '-');
+    id = id.replace(/^#/, '');
+    // allow empty = remove
+    const target = block.querySelector('.editable-content > div') ||
+        block.querySelector('.editable-content');
+    if (!target) return;
+    if (!id) {
+        target.removeAttribute('id');
+        return;
+    }
+    if (!/^[A-Za-z][\w\-\:\.]*$/.test(id)) {
+        if (typeof showNotification === 'function') {
+            showNotification('ID якоря: латиница, может начинаться с буквы', 'warning');
+        }
+        return;
+    }
+    target.id = id;
+}
+
+function tocItemRowHtml(text, href) {
+    text = text || '';
+    href = href || '#';
+    return (
+        '<div class="toc-item-row" style="display:flex;gap:6px;align-items:center;margin-bottom:6px">' +
+        '<input type="text" class="settings-control toc-item-text" placeholder="Название" value="' + String(text).replace(/"/g, '&quot;') + '" style="flex:1;min-width:80px">' +
+        '<input type="text" class="settings-control toc-item-href" placeholder="#якорь или URL" value="' + String(href).replace(/"/g, '&quot;') + '" style="flex:1;min-width:80px">' +
+        '<button type="button" class="settings-btn toc-item-remove" title="Удалить">×</button>' +
+        '</div>'
+    );
+}
+
+function setupTocItemsEditor(block) {
+    const panel = block.querySelector('.settings-panel');
+    if (!panel) return;
+    const host = panel.querySelector('.toc-items-editor');
+    if (!host) return;
+
+    const list = block.querySelector('.toc-list');
+    const items = [];
+    if (list) {
+        list.querySelectorAll(':scope > li').forEach(function(li) {
+            const a = li.querySelector('a');
+            if (a) items.push({ text: (a.textContent || '').trim(), href: a.getAttribute('href') || '#' });
+            else items.push({ text: (li.textContent || '').trim(), href: '#' });
+        });
+    }
+    if (!items.length) items.push({ text: 'Раздел 1', href: '#section-1' });
+
+    host.innerHTML = items.map(function(it) { return tocItemRowHtml(it.text, it.href); }).join('');
+
+    function bindRows() {
+        host.querySelectorAll('.toc-item-remove').forEach(function(btn) {
+            btn.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const row = btn.closest('.toc-item-row');
+                if (row) row.remove();
+            };
+        });
+    }
+    bindRows();
+
+    const addBtn = panel.querySelector('.toc-add-item');
+    if (addBtn && !addBtn.dataset.bound) {
+        addBtn.dataset.bound = '1';
+        addBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            host.insertAdjacentHTML('beforeend', tocItemRowHtml('Новый пункт', '#'));
+            bindRows();
+        });
+    }
+
+    const fromBtn = panel.querySelector('.toc-from-headings');
+    if (fromBtn && !fromBtn.dataset.bound) {
+        fromBtn.dataset.bound = '1';
+        fromBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const editor = document.getElementById('editor');
+            if (!editor) return;
+            const found = [];
+            editor.querySelectorAll('h1, h2, h3, .toc-title, [id]').forEach(function(el) {
+                if (el.closest('.content-toc')) return;
+                if (el.closest('.block-actions, .settings-panel, .drag-handle')) return;
+                let id = el.id;
+                let text = (el.textContent || '').trim().replace(/\s+/g, ' ');
+                if (!text || text.length > 120) return;
+                // headings without id — generate slug
+                if (!id && /^H[1-3]$/.test(el.tagName)) {
+                    id = text.toLowerCase()
+                        .replace(/[^\wа-яё\s\-]+/gi, '')
+                        .trim()
+                        .replace(/\s+/g, '-')
+                        .replace(/^[0-9\-]+/, '') || ('h-' + found.length);
+                    // only latin id for HTML id safety
+                    if (!/^[A-Za-z]/.test(id)) id = 'section-' + (found.length + 1);
+                    el.id = id;
+                }
+                if (!id) return;
+                // prefer real headings
+                if (/^H[1-3]$/.test(el.tagName) || el.classList.contains('numbered-title') || el.classList.contains('toc-title')) {
+                    found.push({ text: text.slice(0, 80), href: '#' + id });
+                }
+            });
+            // also collect blocks with anchor id on container
+            editor.querySelectorAll('.block .editable-content > div[id]').forEach(function(div) {
+                if (div.closest('.content-toc')) return;
+                const id = div.id;
+                if (!id) return;
+                if (found.some(function(f) { return f.href === '#' + id; })) return;
+                let text = '';
+                const title = div.querySelector('[class*="-title"], h1, h2, h3, strong');
+                text = title ? (title.textContent || '').trim() : id;
+                found.push({ text: text.slice(0, 80) || id, href: '#' + id });
+            });
+            if (!found.length) {
+                if (typeof showNotification === 'function') {
+                    showNotification('Нет заголовков или якорей в статье. Задайте ID в настройках блока.', 'warning');
+                }
+                return;
+            }
+            host.innerHTML = found.map(function(it) { return tocItemRowHtml(it.text, it.href); }).join('');
+            bindRows();
+            if (typeof showNotification === 'function') {
+                showNotification('Добавлено пунктов: ' + found.length, 'success');
+            }
+        });
+    }
+}
+
+function applyTocItemsFromPanel(block) {
+    if (!block.classList.contains('content-toc')) return;
+    const panel = block.querySelector('.settings-panel');
+    if (!panel) return;
+    const host = panel.querySelector('.toc-items-editor');
+    if (!host) return;
+    let list = block.querySelector('.toc-list');
+    if (!list) {
+        const content = block.querySelector('.toc-content');
+        if (content) {
+            content.innerHTML = '<ol class="toc-list"></ol>';
+            list = content.querySelector('.toc-list');
+        }
+    }
+    if (!list) return;
+    const rows = host.querySelectorAll('.toc-item-row');
+    const html = [];
+    rows.forEach(function(row) {
+        let text = (row.querySelector('.toc-item-text') && row.querySelector('.toc-item-text').value || '').trim();
+        let href = (row.querySelector('.toc-item-href') && row.querySelector('.toc-item-href').value || '').trim();
+        if (!text && !href) return;
+        if (!text) text = href;
+        if (!href) href = '#';
+        if (/^[A-Za-z][\w\-\:\.]*$/.test(href) && href.charAt(0) !== '#') href = '#' + href;
+        html.push('<li><a href="' + href.replace(/"/g, '&quot;') + '">' + text.replace(/</g, '&lt;') + '</a></li>');
+    });
+    list.innerHTML = html.length ? html.join('') : '<li><a href="#section-1">Раздел 1</a></li>';
+}
+

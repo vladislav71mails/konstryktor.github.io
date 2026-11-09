@@ -13,7 +13,7 @@ const templateCategories = {
     },
     content: {
         name: 'Контентные блоки',
-        templates: ['image', 'quote']
+        templates: ['image', 'quote', 'toc']
     },
     useful: {
         name: 'Полезные блоки',
@@ -78,6 +78,11 @@ function initTemplateCategories() {
     });
 
     initSidebarTemplateDrag();
+
+    // Пользовательские шаблоны (палитра + toolbar)
+    if (window.UserTemplates && typeof window.UserTemplates.refreshUserPalette === 'function') {
+        window.UserTemplates.refreshUserPalette();
+    }
 }
 
 // initSidebarTemplateDrag → js/drag/sidebar-drag.js
@@ -98,6 +103,7 @@ const TEMPLATE_ICONS = {
     'code': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
     'image': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',
     'quote': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z"/></svg>',
+    'toc': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
     'link-buttons': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
     '1c-configuration': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
     'glossary': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
@@ -129,6 +135,7 @@ function createTemplateItem(templateId) {
         'code': { name: 'Код', desc: 'Блок для выделения кода' },
         'image': { name: 'Изображение', desc: 'Блок для вставки изображений' },
         'quote': { name: 'Цитата', desc: 'Блок для выделения цитат' },
+        'toc': { name: 'Оглавление', desc: 'Список ссылок на разделы статьи' },
         'link-buttons': { name: 'Кнопки-ссылки', desc: 'Группа кнопок-ссылок' },
         '1c-configuration': { name: 'Конфигурация 1С', desc: 'Настройки для разных версий 1С' },
         'glossary': { name: 'Термины', desc: 'Блок с определениями терминов' },

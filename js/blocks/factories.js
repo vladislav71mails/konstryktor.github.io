@@ -24,6 +24,15 @@ const universalSettingsHTML = `
     </div>
     
     <div class="settings-group">
+        <div class="settings-group-title">Якорь для ссылок</div>
+        <div class="settings-row">
+            <label class="settings-label">ID якоря:</label>
+            <input type="text" class="settings-control anchor-id-setting" placeholder="например section-1" pattern="[A-Za-z][\w\-:\.]*" style="flex:1;min-width:120px">
+        </div>
+        <p class="settings-hint" style="margin:4px 0 0;font-size:11px;color:var(--muted-text)">Ссылка: <code>#id</code>. Латиница, цифры, дефис.</p>
+    </div>
+
+    <div class="settings-group">
         <div class="settings-group-title">Видимость элементов</div>
         <div class="settings-row">
             <label class="settings-label">
@@ -65,6 +74,12 @@ function insertTemplate(type, beforeNode) {
     }
     
     let html = '';
+
+    // Пользовательские шаблоны (id вида user:utpl_…)
+    if (typeof type === 'string' && type.indexOf('user:') === 0 && window.UserTemplates && typeof window.UserTemplates.insertUserTemplate === 'function') {
+        window.UserTemplates.insertUserTemplate(type.slice(5), beforeNode);
+        return;
+    }
     
     switch(type) {
         case 'text':
@@ -88,6 +103,7 @@ function insertTemplate(type, beforeNode) {
         case 'code': html = createCodeBlock(); break;
         case 'image': html = createImageBlock(); break;
         case 'quote': html = createQuoteBlock(); break;
+        case 'toc': html = createTocBlock(); break;
         case 'link-buttons': html = createLinkButtonsBlock(); break;
         case '1c-configuration': html = create1CConfigurationBlock(); break;
         case 'glossary': html = createGlossaryBlock(); break;
@@ -342,6 +358,57 @@ function createNumberedBlock() {
     </div>`;
 }
 
+function createTocBlock() {
+    return `
+    <div class="block content-toc" draggable="false">
+        <div class="drag-handle">≡</div>
+        <div class="block-actions">
+            <button class="copy-block" type="button" title="Копировать" aria-label="Копировать">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+            <button class="export-html-block" type="button" title="Экспорт HTML" aria-label="Экспорт HTML">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>
+            </button>
+            <button class="settings-block" type="button" title="Настройки" aria-label="Настройки">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+            <button class="delete-block" type="button" title="Удалить" aria-label="Удалить">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            </button>
+        </div>
+        <div class="block-settings">
+            <button class="insert-macro-btn">+ Вставить макрос</button>
+        </div>
+        <div class="settings-panel">
+            <div class="settings-group">
+                <div class="settings-group-title">Пункты оглавления</div>
+                <div class="toc-items-editor"></div>
+                <div class="settings-row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
+                    <button type="button" class="settings-btn toc-add-item">+ Пункт</button>
+                    <button type="button" class="settings-btn toc-from-headings">Из заголовков статьи</button>
+                </div>
+                <p class="settings-hint" style="margin:6px 0 0;font-size:11px;color:var(--muted-text)">Якорь: <code>#section-1</code> или полная ссылка. Заголовкам задайте ID в настройках блока.</p>
+            </div>
+            ${universalSettingsHTML}
+        </div>
+        <div class="editable-content" contenteditable="false">
+            <div class="toc-container" style="background: var(--tpl-numbered-bg, #f8f9fa); border: 1px solid var(--tpl-numbered-border, #e9ecef); padding: 15px; margin-bottom: 15px; border-radius: 4px; color: var(--text-color, #333);">
+                <div class="toc-header" style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <div class="toc-icon" style="background: #2e7d32; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">≡</div>
+                    <div class="toc-title" contenteditable="true" data-placeholder="Оглавление"><strong>Оглавление</strong></div>
+                </div>
+                <div class="toc-content" contenteditable="true">
+                    <ol class="toc-list">
+                        <li><a href="#section-1">Раздел 1</a></li>
+                        <li><a href="#section-2">Раздел 2</a></li>
+                        <li><a href="#section-3">Раздел 3</a></li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
 function createCodeBlock() {
     return `
     <div class="block content-code" draggable="false">
@@ -431,8 +498,8 @@ function createImageBlock() {
             <div class="image-container" style="background: var(--tpl-image-bg, #f8f9fa); border: 1px solid var(--tpl-image-border, #e9ecef); padding: 15px; margin-bottom: 15px; border-radius: 4px; text-align: center;">
                 <div class="image-upload-zone" data-empty="1">
                     <img src="" alt="Описание изображения" class="image-element" hidden style="max-width: 100%; height: auto; border-radius: 4px; margin-bottom: 10px;">
-                    <button type="button" class="image-upload-btn">📷 Выбрать файл или скриншот</button>
-                    <p class="image-upload-hint">PNG, JPG, GIF, WebP — сохранится в ZIP при экспорте</p>
+                    <button type="button" class="image-upload-btn">📷 Файл, скриншот или URL</button>
+                    <p class="image-upload-hint">Перетащите картинку, вставьте из буфера (Ctrl+V) или укажите URL в настройках ⚙</p>
                     <input type="file" class="image-block-file-input" accept="image/*" hidden>
                 </div>
                 <div class="image-caption" contenteditable="true" data-placeholder="Подпись к изображению…" style="color: var(--tpl-image-caption, #666); font-style: italic; font-size: 14px;"></div>
@@ -705,8 +772,8 @@ function createImageCaptionBlock() {
             <div class="image-caption-container" style="text-align: center; margin: 15px 0;">
                 <div class="image-upload-zone" data-empty="1">
                     <img class="image-element" hidden style="max-width: 100%; height: auto; border: 1px solid var(--border-color, #ddd); border-radius: 4px; margin: 10px 0;" src="" alt="Описание изображения" />
-                    <button type="button" class="image-upload-btn">📷 Выбрать файл или скриншот</button>
-                    <p class="image-upload-hint">Файл попадёт в папку images/ при экспорте ZIP</p>
+                    <button type="button" class="image-upload-btn">📷 Файл, скриншот или URL</button>
+                    <p class="image-upload-hint">Drag&drop, Ctrl+V или URL в настройках ⚙ — в ZIP уйдёт как images/</p>
                     <input type="file" class="image-block-file-input" accept="image/*" hidden>
                 </div>
                 <div class="caption-text" contenteditable="true" data-placeholder="Подпись к изображению…" style="color: var(--tpl-image-caption, #666); font-style: italic; font-size: 14px; margin-top: 5px;"></div>
@@ -1183,6 +1250,7 @@ window.createWarningBlock = createWarningBlock;
 window.createSuccessBlock = createSuccessBlock;
 window.createNoteBlock = createNoteBlock;
 window.createNumberedBlock = createNumberedBlock;
+window.createTocBlock = createTocBlock;
 window.createCodeBlock = createCodeBlock;
 window.createImageBlock = createImageBlock;
 window.createQuoteBlock = createQuoteBlock;

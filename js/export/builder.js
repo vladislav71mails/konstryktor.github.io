@@ -181,6 +181,68 @@ function buildCleanExportHTML(options) {
     return getCleanHTMLFromClone(contentClone);
 }
 
+/**
+ * Применить пресет экспорта: bitrix | full | selected
+ */
+function applyExportPreset(preset) {
+    const selectedOnlyCb = document.getElementById('export-selected-only');
+    const fullDocCb = document.getElementById('export-full-document');
+    const setStyle = function (value) {
+        const radio = document.querySelector('input[name="export-style-mode"][value="' + value + '"]');
+        if (radio) radio.checked = true;
+    };
+
+    if (preset === 'bitrix') {
+        // Фрагмент для вставки в CMS / Wiki — без оболочки, без отдельных стилей
+        if (selectedOnlyCb) selectedOnlyCb.checked = false;
+        if (fullDocCb) fullDocCb.checked = false;
+        setStyle('none');
+    } else if (preset === 'full') {
+        if (selectedOnlyCb) selectedOnlyCb.checked = false;
+        if (fullDocCb) fullDocCb.checked = true;
+        setStyle('inline');
+    } else if (preset === 'selected') {
+        if (selectedOnlyCb) selectedOnlyCb.checked = true;
+        if (fullDocCb) fullDocCb.checked = false;
+        setStyle('none');
+        const editor = document.getElementById('editor');
+        const count = editor ? editor.querySelectorAll('.block.selected').length : 0;
+        if (!count && typeof showNotification === 'function') {
+            showNotification('Нет выделенных блоков — отметьте блоки или снимите пресет', 'warning');
+        }
+    }
+
+    document.querySelectorAll('.export-preset-btn').forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-export-preset') === preset);
+    });
+    refreshExportPreview();
+}
+
+/** Последний HTML тела для превью (перерисовка iframe после показа вкладки) */
+var _exportPreviewBodyHtml = '';
+var _exportPreviewTitle = 'Статья';
+
+/**
+ * Переключить вкладку Превью / Код
+ */
+function setExportView(view) {
+    const previewWrap = document.getElementById('export-preview-wrap');
+    const exportArea = document.getElementById('export-area');
+    document.querySelectorAll('.export-view-tab').forEach(function (tab) {
+        const active = tab.getAttribute('data-export-view') === view;
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    if (previewWrap) previewWrap.hidden = view !== 'preview';
+    if (exportArea) exportArea.hidden = view !== 'code';
+    // iframe часто пустой, если srcdoc ставили, пока он был hidden / в display:none модалке
+    if (view === 'preview') {
+        requestAnimationFrame(function () {
+            updateExportVisualPreview(_exportPreviewBodyHtml, _exportPreviewTitle);
+        });
+    }
+}
+
 function refreshExportPreview() {
     const exportArea = document.getElementById('export-area');
     const exportModal = document.getElementById('export-modal');
@@ -195,13 +257,66 @@ function refreshExportPreview() {
     let bodyHtml = buildCleanExportHTML({ selectedOnly: selectedOnly });
     if (!bodyHtml && selectedOnly) {
         exportArea.value = '<!-- Нет выделенных блоков. Снимите галочку или выделите блоки. -->';
+        _exportPreviewBodyHtml = '<p style="color:#888">Нет выделенных блоков. Отметьте блоки в редакторе или снимите пресет «Только выделенное».</p>';
+        _exportPreviewTitle = title;
+        updateExportVisualPreview(_exportPreviewBodyHtml, title);
         return;
     }
     if (fullDoc) {
-        exportArea.value = buildExportDocument(bodyHtml, title, styleMode === 'external' ? 'external' : (styleMode === 'none' ? 'none' : 'inline'));
+        exportArea.value = buildExportDocument(
+            bodyHtml,
+            title,
+            styleMode === 'external' ? 'external' : (styleMode === 'none' ? 'none' : 'inline')
+        );
     } else {
         exportArea.value = bodyHtml;
     }
+
+    _exportPreviewBodyHtml = bodyHtml || '';
+    _exportPreviewTitle = title;
+    // Визуальное превью всегда со стилями статьи (даже если экспорт «без стилей»)
+    updateExportVisualPreview(_exportPreviewBodyHtml, title);
+}
+
+function updateExportVisualPreview(bodyHtml, title) {
+    const frame = document.getElementById('export-preview-frame');
+    if (!frame) return;
+    const css = getExportArticleCss();
+    const safeTitle = (title || 'Статья').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const doc =
+        '<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+        '<title>' + safeTitle + '</title>' +
+        '<style>\n' + css + '\n' +
+        'html, body { background: #fff; margin: 0; }\n' +
+        'body { padding: 8px 12px; box-sizing: border-box; }\n' +
+        '</style></head><body>\n' +
+        (bodyHtml || '<p style="color:#888">Пусто</p>') +
+        '\n</body></html>';
+
+    // Сброс + повторная установка srcdoc надёжнее, чем одна запись в скрытый iframe
+    frame.removeAttribute('src');
+    frame.srcdoc = '';
+    // небольшой отложенный assign — модалка уже отрисована
+    setTimeout(function () {
+        frame.srcdoc = doc;
+    }, 0);
+}
+
+/**
+ * Слушатели пресетов и вкладок превью (вызвать один раз при инициализации UI)
+ */
+function setupExportPresetsUI() {
+    document.querySelectorAll('.export-preset-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            applyExportPreset(btn.getAttribute('data-export-preset'));
+        });
+    });
+    document.querySelectorAll('.export-view-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            setExportView(tab.getAttribute('data-export-view'));
+        });
+    });
 }
 
 function downloadExportedHtml(withCssFile) {
@@ -413,13 +528,26 @@ function exportHTML() {
     const selectedCount = editor.querySelectorAll('.block.selected').length;
     const selectedOnlyCb = document.getElementById('export-selected-only');
     if (selectedOnlyCb) {
-        selectedOnlyCb.checked = selectedCount > 0;
         selectedOnlyCb.disabled = false;
     }
 
     exportModal.classList.add('active');
-    refreshExportPreview();
-    showNotification('Экспорт готов. Можно скопировать или скачать файл.', 'success');
+    // Сначала вкладка «Превью» (чтобы iframe был видимым), затем пресет и сборка
+    setExportView('preview');
+    // По умолчанию: если есть выделение — пресет «только выделенное», иначе «полный документ»
+    // rAF: дождаться layout модалки, иначе srcdoc в ещё не показанный iframe бывает пустым
+    requestAnimationFrame(function () {
+        if (selectedCount > 0) {
+            applyExportPreset('selected');
+        } else {
+            applyExportPreset('full');
+        }
+        // повторная отрисовка превью после появления модалки
+        setTimeout(function () {
+            updateExportVisualPreview(_exportPreviewBodyHtml, _exportPreviewTitle);
+        }, 30);
+    });
+    showNotification('Превью публикации готово. Проверьте вид и скачайте файл.', 'success');
 }
 
 // Конвертирует CSS переменные (включая var(--x, fallback)) в реальные значения.
@@ -564,6 +692,127 @@ function fixLightTextOnLightBg(root) {
 }
 
 
+/**
+ * CSS для печати / «Сохранить как PDF» (поверх стилей статьи)
+ */
+function getPrintExtraCss() {
+    return [
+        '@page { margin: 12mm 14mm; }',
+        'html, body { background: #fff !important; color: #111 !important; }',
+        'body { max-width: none; margin: 0; padding: 0; }',
+        'a { color: #0d6e6e; text-decoration: underline; }',
+        'img { max-width: 100% !important; page-break-inside: avoid; }',
+        'table { page-break-inside: auto; }',
+        'tr, .content-warning, .content-success, .content-note, .content-code, blockquote { page-break-inside: avoid; }',
+        'h1, h2, h3 { page-break-after: avoid; }',
+        '.print-doc-title { font-size: 1.75em; margin: 0 0 0.6em; line-height: 1.25; }',
+        '.print-doc-meta { color: #666; font-size: 0.85em; margin: 0 0 1.25em; }'
+    ].join('\n');
+}
+
+/**
+ * Печать HTML через скрытый iframe → диалог браузера (там же «Сохранить как PDF»).
+ * @param {string} bodyHtml
+ * @param {string} [title]
+ * @param {object} [opts]
+ * @param {string} [opts.meta] — подзаголовок под названием
+ */
+function printHtmlDocument(bodyHtml, title, opts) {
+    opts = opts || {};
+    const safeTitle = (title || 'Статья').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const metaHtml = opts.meta
+        ? '<p class="print-doc-meta">' + String(opts.meta).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>'
+        : '';
+    const body =
+        (title ? '<h1 class="print-doc-title">' + safeTitle + '</h1>' : '') +
+        metaHtml +
+        (bodyHtml || '<p style="color:#888">Пустой документ</p>');
+
+    const css = getExportArticleCss() + '\n' + getPrintExtraCss();
+    const doc =
+        '<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+        '<title>' + safeTitle + '</title>' +
+        '<style>\n' + css + '\n</style></head><body>\n' + body + '\n' +
+        '<script>window.onload=function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},200);};<\/script>' +
+        '</body></html>';
+
+    let iframe = document.getElementById('konstryktor-print-frame');
+    if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'konstryktor-print-frame';
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;';
+        document.body.appendChild(iframe);
+    }
+
+    try {
+        const idoc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
+        if (!idoc) throw new Error('no iframe document');
+        idoc.open();
+        idoc.write(doc);
+        idoc.close();
+        // запасной вызов print, если onload не сработал
+        setTimeout(function () {
+            try {
+                if (iframe.contentWindow) {
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+                }
+            } catch (e2) { /* ignore */ }
+        }, 450);
+        if (typeof showNotification === 'function') {
+            showNotification('Откройте диалог печати → «Сохранить как PDF»', 'info');
+        }
+        return true;
+    } catch (err) {
+        // fallback: новая вкладка
+        try {
+            const w = window.open('', '_blank');
+            if (w) {
+                w.document.open();
+                w.document.write(doc);
+                w.document.close();
+                return true;
+            }
+        } catch (e3) { /* ignore */ }
+        if (typeof showNotification === 'function') {
+            showNotification('Не удалось открыть печать', 'warning');
+        }
+        return false;
+    }
+}
+
+/**
+ * Печать текущего документа редактора (чистый HTML без UI)
+ */
+function printEditorDocument() {
+    const editor = document.getElementById('editor');
+    if (!editor || !String(editor.innerHTML || '').trim()) {
+        if (typeof showNotification === 'function') {
+            showNotification('Редактор пуст — нечего печатать', 'warning');
+        }
+        return;
+    }
+    const bodyHtml = typeof buildCleanExportHTML === 'function'
+        ? buildCleanExportHTML({ selectedOnly: false })
+        : editor.innerHTML;
+    if (!bodyHtml || !bodyHtml.trim()) {
+        if (typeof showNotification === 'function') {
+            showNotification('Нет содержимого для печати', 'warning');
+        }
+        return;
+    }
+    let title = 'Статья';
+    const titleInput = document.getElementById('export-title');
+    if (titleInput && titleInput.value.trim()) title = titleInput.value.trim();
+    else {
+        const h = editor.querySelector('h1, h2, .content-heading');
+        if (h && (h.textContent || '').trim()) title = (h.textContent || '').trim().slice(0, 120);
+    }
+    printHtmlDocument(bodyHtml, title);
+}
+
 // Экспорт в глобальную область (переходный период)
 window.getExportStyleMode = getExportStyleMode;
 window.getExportArticleCss = getExportArticleCss;
@@ -572,6 +821,13 @@ window.downloadBlobFile = downloadBlobFile;
 window.getCleanHTMLFromClone = getCleanHTMLFromClone;
 window.buildCleanExportHTML = buildCleanExportHTML;
 window.refreshExportPreview = refreshExportPreview;
+window.applyExportPreset = applyExportPreset;
+window.setExportView = setExportView;
+window.setupExportPresetsUI = setupExportPresetsUI;
 window.downloadExportedHtml = downloadExportedHtml;
+window.downloadExportedZip = downloadExportedZip;
 window.exportHTML = exportHTML;
 window.convertCssVarsToValues = convertCssVarsToValues;
+window.printHtmlDocument = printHtmlDocument;
+window.printEditorDocument = printEditorDocument;
+window.getPrintExtraCss = getPrintExtraCss;

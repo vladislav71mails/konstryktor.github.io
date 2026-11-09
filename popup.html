@@ -13,6 +13,8 @@
       --accent: #3b82f6;
       --accent-hover: #2563eb;
       --border: #334155;
+      --warn: #f59e0b;
+      --critical: #ef4444;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -55,10 +57,11 @@
       background: var(--accent);
       color: #fff;
       transition: background 0.15s;
+      text-align: left;
     }
     .btn:hover { background: var(--accent-hover); }
+    .btn + .btn { margin-top: 8px; }
     .btn-secondary {
-      margin-top: 8px;
       background: transparent;
       color: var(--muted);
       border: 1px solid var(--border);
@@ -68,12 +71,93 @@
       background: var(--card);
       color: var(--text);
     }
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn-row .btn {
+      margin-top: 0;
+      text-align: center;
+      padding: 9px 10px;
+      font-size: 12px;
+    }
     .hint {
       margin-top: 12px;
       font-size: 11px;
       color: var(--muted);
       line-height: 1.4;
     }
+    .section-label {
+      margin: 12px 0 6px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .storage-card {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+      font-size: 11px;
+    }
+    .storage-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .storage-card-title {
+      font-weight: 600;
+      font-size: 11px;
+    }
+    .storage-card-total {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      font-size: 10px;
+    }
+    .storage-card-total.warn { color: var(--warn); }
+    .storage-card-total.critical { color: var(--critical); font-weight: 600; }
+    .storage-bar {
+      height: 5px;
+      border-radius: 999px;
+      background: var(--border);
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .storage-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.25s ease;
+    }
+    .storage-bar.warn .storage-bar-fill { background: var(--warn); }
+    .storage-bar.critical .storage-bar-fill { background: var(--critical); }
+    .storage-rows {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      color: var(--muted);
+    }
+    .storage-rows li {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .storage-rows strong {
+      color: var(--text);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .storage-muted { color: var(--muted); }
   </style>
 </head>
 <body>
@@ -85,8 +169,17 @@
     </div>
   </div>
   <button type="button" class="btn" id="open-editor">Открыть редактор</button>
-  <button type="button" class="btn btn-secondary" id="open-wiki">Справка (Wiki)</button>
-  <p class="hint">Редактор открывается во вкладке расширения. Данные хранятся локально в браузере.</p>
+  <button type="button" class="btn btn-secondary" id="open-kb">База знаний</button>
+  <div class="section-label">Ещё</div>
+  <div class="btn-row">
+    <button type="button" class="btn btn-secondary" id="open-wiki">Wiki</button>
+    <button type="button" class="btn btn-secondary" id="open-editor-new">Новая статья</button>
+  </div>
+  <div class="storage-card" id="popup-storage" aria-live="polite">
+    <div class="storage-muted">Подсчёт места…</div>
+  </div>
+  <p class="hint">Редактор и база знаний открываются во вкладке расширения. Данные только локально.</p>
+  <script src="js/core/idb-storage.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
